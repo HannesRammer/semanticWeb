@@ -2,6 +2,7 @@ var analyzer = {
     JSONRootItemScopeList: [],
     HTMLRootItemScopeList: [],
     itemScopeIDList: [],
+    crossConnectionIDList: [],
     jsonHash: {},
     possibleItemScopeRelationHash: [],
     directCrossConnectionToItemScopeHash: {},
@@ -78,9 +79,9 @@ var analyzer = {
 
                                                         //TODO
                                                         var propertyConnectionIDs = [];
-                                                        if(sortedScopeConnectionIDs[0] === currentItem.scopeID){
-                                                            propertyConnectionIDs = [currentItemChild['propertyID'],storageItemChild['propertyID']];
-                                                        }else{
+                                                        if (sortedScopeConnectionIDs[0] === currentItem.scopeID) {
+                                                            propertyConnectionIDs = [currentItemChild['propertyID'], storageItemChild['propertyID']];
+                                                        } else {
                                                             propertyConnectionIDs = [storageItemChild['propertyID'], currentItemChild['propertyID']];
                                                         }
                                                         var joinedScopeConnectionID = sortedScopeConnectionIDs.join('-');
@@ -92,47 +93,48 @@ var analyzer = {
                                                                 analyzer.possibleItemScopeRelationList.push(joinedScopeConnectionID);
                                                             }**/
                                                         //NEW
-                                                        debugger;
                                                         var currentCrossId = -1;
                                                         var newCrossId = Object.keys(analyzer.directItemScopeToCrossConnectionHash).length;
                                                         var length = Object.keys(analyzer.directItemScopeToCrossConnectionHash).length;
                                                         var hasCurrentItemScopeId = analyzer.directItemScopeToCrossConnectionHash.hasOwnProperty(currentItem.scopeID);
                                                         var hasStorageItemScopeId = analyzer.directItemScopeToCrossConnectionHash.hasOwnProperty(storageItem.scopeID);
                                                         //find existing cross id
-                                                        if(hasCurrentItemScopeId){
+                                                        if (hasCurrentItemScopeId) {
                                                             currentCrossId = analyzer.directItemScopeToCrossConnectionHash[currentItem.scopeID];
-                                                        }else{
-                                                            if(hasStorageItemScopeId){
+                                                        } else {
+                                                            if (hasStorageItemScopeId) {
                                                                 currentCrossId = analyzer.directItemScopeToCrossConnectionHash[storageItem.scopeID];
                                                             }
                                                         }
 
-                                                        if(currentCrossId == -1){
+                                                        if (currentCrossId == -1) {
                                                             currentCrossId = newCrossId;
                                                         }
                                                         analyzer.directItemScopeToCrossConnectionHash[currentItem.scopeID] = currentCrossId;
                                                         analyzer.directItemScopeToCrossConnectionHash[storageItem.scopeID] = currentCrossId;
 
                                                         var hasCurrentCrossConnectionId = analyzer.directCrossConnectionToItemScopeHash.hasOwnProperty(currentCrossId.toString());
-                                                        if(hasCurrentCrossConnectionId){
+                                                        if (hasCurrentCrossConnectionId) {
                                                             var itemScopeIDs = analyzer.directCrossConnectionToItemScopeHash[currentCrossId];
-                                                            if(itemScopeIDs.indexOf(currentItem.scopeID) < 0){
+                                                            if (itemScopeIDs.indexOf(currentItem.scopeID) < 0) {
                                                                 itemScopeIDs.push(currentItem.scopeID);
                                                             }
-                                                            if(itemScopeIDs.indexOf(storageItem.scopeID) < 0){
+                                                            if (itemScopeIDs.indexOf(storageItem.scopeID) < 0) {
                                                                 itemScopeIDs.push(storageItem.scopeID);
                                                             }
 
-                                                        }else{
-                                                            analyzer.directCrossConnectionToItemScopeHash[currentCrossId]=[currentItem.scopeID,storageItem.scopeID];
+                                                        } else {
+                                                            analyzer.directCrossConnectionToItemScopeHash[currentCrossId] = [currentItem.scopeID, storageItem.scopeID];
                                                         }
-
+                                                        if (analyzer.crossConnectionIDList.indexOf(currentCrossId) < 0) {
+                                                            analyzer.crossConnectionIDList.push(currentCrossId);
+                                                        }
                                                         if (analyzer.possibleItemScopeRelationHash.hasOwnProperty(joinedScopeConnectionID)) {
                                                             var possiblePropertyRelationList = analyzer.possibleItemScopeRelationHash[joinedScopeConnectionID];
                                                             if (possiblePropertyRelationList.indexOf(joinedPropertyConnectionID) < 0) {
                                                                 possiblePropertyRelationList.push(joinedPropertyConnectionID);
                                                             }
-                                                        }else{
+                                                        } else {
                                                             analyzer.possibleItemScopeRelationHash[joinedScopeConnectionID] = [joinedPropertyConnectionID];
                                                         }
                                                     } else {
@@ -370,7 +372,7 @@ var visual = {
         },
         mappedPossibleConnections: function () {
             var mappingTab = visual.getDisplay("mapping");
-            Object.keys(analyzer.possibleItemScopeRelationHash).forEach(function(possibleJoinedScopeRelationID){
+            Object.keys(analyzer.possibleItemScopeRelationHash).forEach(function (possibleJoinedScopeRelationID) {
                 var possibleJoinedScopeRelationIDs = possibleJoinedScopeRelationID.split('-');
                 var possiblePropertyRelationList = analyzer.possibleItemScopeRelationHash[possibleJoinedScopeRelationID];
                 for (var i = 0; i < possiblePropertyRelationList.length; i++) {
@@ -381,7 +383,7 @@ var visual = {
                     var JSONItemScope2 = analyzer.jsonHash[possibleJoinedScopeRelationIDs[1]];
                     for (var j = 0; j < JSONItemScope1.children.length; j++) {
                         var property = JSONItemScope1.children[j];
-                        if(property['propertyID'] == parseInt(possiblePropertyRelationIDs[0])){
+                        if (property['propertyID'] == parseInt(possiblePropertyRelationIDs[0])) {
                             if (typeof itemScopePropertyConnectionReason.textContent !== "undefined") {
                                 itemScopePropertyConnectionReason.textContent = property.nodeName + " : " + property.nodeValue;
                             } else {
@@ -397,8 +399,6 @@ var visual = {
                     box.style.overflow = "auto";
 
 
-
-
                     var htmlUl1 = visual.createHTMLFromJSONScope(JSONItemScope1);
                     var htmlUl2 = visual.createHTMLFromJSONScope(JSONItemScope2);
                     box.appendChild(itemScopePropertyConnectionReason);
@@ -406,6 +406,27 @@ var visual = {
                     box.appendChild(htmlUl2);
                     mappingTab.appendChild(box);
                 }
+            });
+        },
+        semanticMapping: function () {
+            var mappingTab = visual.getDisplay("semanticInfo");
+
+
+            Object.keys(analyzer.directCrossConnectionToItemScopeHash).forEach(function (directCrossConnectionID) {
+                var box = document.createElement("div");
+                box.style.border = "1px solid black";
+                box.style.maxHeight = "150px";
+                box.style.width = "100%";
+                box.style.overflow = "auto";
+
+                var itemScopeIDs = analyzer.directCrossConnectionToItemScopeHash[directCrossConnectionID];
+                for (var i = 0; i < itemScopeIDs.length; i++) {
+                    var htmlUl1 = visual.createHTMLFromJSONScope(analyzer.jsonHash[itemScopeIDs[i]]);
+                    box.appendChild(htmlUl1);
+
+                }
+                mappingTab.appendChild(box);
+
             });
         }
     },
@@ -564,6 +585,7 @@ var storage = {
         localStorage.setItem("possibleItemScopeRelationHash", JSON.stringify({}));
         localStorage.setItem("directCrossConnectionToItemScopeHash", JSON.stringify({}));
         localStorage.setItem("directItemScopeToCrossConnectionHash", JSON.stringify({}));
+        localStorage.setItem("directItemScopeToCrossConnectionHash", JSON.stringify({}));
 
     },
 
@@ -607,6 +629,7 @@ var run = {
         analyzer.mapAllForSemanticReference();
         visual.render.analyzedItemsFromItemList();
         visual.render.mappedPossibleConnections();
+        visual.render.semanticMapping();
     },
     updateLocalStorage: function () {
         storage.writeToLocalStorage();
