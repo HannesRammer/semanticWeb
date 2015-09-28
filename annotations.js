@@ -90,12 +90,11 @@ var analyzer = {
                                                         //add to list if not already exists
                                                         /**first if should not happen due tu differend source
                                                          * if (analyzer.relationBetweenItemScopesAndTheirContainedItemScopes.indexOf(joinedScopeConnectionID) < 0 && analyzer.possibleItemScopeRelationList.indexOf(joinedScopeConnectionID) < 0) {
-                                                                analyzer.possibleItemScopeRelationList.push(joinedScopeConnectionID);
-                                                            }**/
+                                                                    analyzer.possibleItemScopeRelationList.push(joinedScopeConnectionID);
+                                                                }**/
                                                         //NEW
                                                         var currentCrossId = -1;
                                                         var newCrossId = Object.keys(analyzer.directItemScopeToCrossConnectionHash).length;
-                                                        var length = Object.keys(analyzer.directItemScopeToCrossConnectionHash).length;
                                                         var hasCurrentItemScopeId = analyzer.directItemScopeToCrossConnectionHash.hasOwnProperty(currentItem.scopeID);
                                                         var hasStorageItemScopeId = analyzer.directItemScopeToCrossConnectionHash.hasOwnProperty(storageItem.scopeID);
                                                         //find existing cross id
@@ -278,6 +277,7 @@ var visual = {
         }
         var htmlContent = document.createElement("a");
         htmlContent.style.cursor = "pointer";
+        htmlContent.title = "ItemScopeID:" + jsonScope.scopeID;
         htmlContent.style.color = "#a9014b";
         if (typeof liType.textContent !== "undefined") {
             htmlContent.textContent = nodeName;
@@ -411,7 +411,6 @@ var visual = {
         semanticMapping: function () {
             var mappingTab = visual.getDisplay("semanticInfo");
 
-
             Object.keys(analyzer.directCrossConnectionToItemScopeHash).forEach(function (directCrossConnectionID) {
                 var box = document.createElement("div");
                 box.style.border = "1px solid black";
@@ -419,12 +418,67 @@ var visual = {
                 box.style.width = "100%";
                 box.style.overflow = "auto";
 
-                var itemScopeIDs = analyzer.directCrossConnectionToItemScopeHash[directCrossConnectionID];
-                for (var i = 0; i < itemScopeIDs.length; i++) {
-                    var htmlUl1 = visual.createHTMLFromJSONScope(analyzer.jsonHash[itemScopeIDs[i]]);
-                    box.appendChild(htmlUl1);
 
+                var itemScopeIDs = analyzer.directCrossConnectionToItemScopeHash[directCrossConnectionID];
+                var itemScopeIDsDublicate =  JSON.parse(JSON.stringify(itemScopeIDs));
+                for (var i = 0; i < itemScopeIDsDublicate.length; itemScopeIDsDublicate.splice(0,1)) {
+                    var firstItemScopeID = itemScopeIDsDublicate[i];
+                    var firstItemScopeCount = 0;
+                    for (var j = i+1; j < itemScopeIDsDublicate.length; j++) {
+                        var secondItemScopeID = itemScopeIDsDublicate[j];
+                        var connectionString = firstItemScopeID+"-"+secondItemScopeID;
+                        console.log(connectionString);
+                        if(analyzer.possibleItemScopeRelationHash.hasOwnProperty(connectionString)){
+                            var propertyConnections = analyzer.possibleItemScopeRelationHash[connectionString];
+                            var connectionTable = document.createElement("table");
+                            var connectionTR = document.createElement("tr");
+                            var firstItemScopeTD = document.createElement("td");
+                            var connectionTD = document.createElement("td");
+                            var secondItemScopeTD = document.createElement("td");
+                            firstItemScopeTD.width ="33%";
+                            connectionTD.width ="33%";
+                            secondItemScopeTD.width ="33%";
+
+                            connectionTable.appendChild(connectionTR);
+                            connectionTR.appendChild(firstItemScopeTD);
+                            connectionTR.appendChild(connectionTD);
+                            connectionTR.appendChild(secondItemScopeTD);
+                            var connectionLink = document.createElement("a");
+                            var connectionLinkText = propertyConnections.length + "connection";
+
+                            if(propertyConnections.length != 1){
+                                connectionLinkText +="s";
+                            }
+                            if (typeof connectionLink.textContent !== "undefined") {
+                                connectionLink.textContent = connectionLinkText;
+
+                            } else {
+                                connectionLink.innerText = connectionLinkText;
+
+                            }
+                            connectionTD.appendChild(connectionLink);
+                            var firstItemScopeUL = visual.createHTMLFromJSONScope(analyzer.jsonHash[firstItemScopeID]);
+                            var secondItemScopeUL = visual.createHTMLFromJSONScope(analyzer.jsonHash[secondItemScopeID]);
+                            var propertyTitleList = "";
+                            for(var k=0;k< propertyConnections.length;k++){
+                                var propertyConnectionID = propertyConnections[k].split("-")[0];
+                                var propertyObject = analyzer.jsonHash[firstItemScopeID].children[propertyConnectionID];
+                                propertyTitleList += propertyObject.nodeName + " " + propertyObject.nodeValue + "\n";
+                            }
+                            connectionLink.title = propertyTitleList;
+                            if(firstItemScopeCount ==0){
+                                firstItemScopeTD.appendChild(firstItemScopeUL);
+                            }
+                            firstItemScopeCount++;
+                            connectionTD.appendChild(connectionLink);
+                            secondItemScopeTD.appendChild(secondItemScopeUL);
+                            box.appendChild(connectionTable);
+                        }
+                    }
+                    //var htmlUl1 = visual.createHTMLFromJSONScope(analyzer.jsonHash[itemScopeIDs[i]]);
+                    //box.appendChild(htmlUl1);
                 }
+
                 mappingTab.appendChild(box);
 
             });
@@ -584,7 +638,6 @@ var storage = {
         localStorage.setItem("relationBetweenItemScopesAndTheirContainedItemScopes", JSON.stringify([]));
         localStorage.setItem("possibleItemScopeRelationHash", JSON.stringify({}));
         localStorage.setItem("directCrossConnectionToItemScopeHash", JSON.stringify({}));
-        localStorage.setItem("directItemScopeToCrossConnectionHash", JSON.stringify({}));
         localStorage.setItem("directItemScopeToCrossConnectionHash", JSON.stringify({}));
 
     },
