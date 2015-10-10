@@ -1,8 +1,19 @@
+// ==UserScript==
+// @name         Semantic annotations
+// @namespace    http://your.homepage/
+// @version      1.0
+// @description  Semantic analyzer
+// @author       Hannes Rammer
+// @match        https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo?hl=de
+// @grant        none
+// ==/UserScript==
 var analyzer = {
+    withIncludedProperties:true,
+    specialIdList: [],
     JSONRootItemScopeList: [],
     HTMLRootItemScopeList: [],
-    itemScopeIDList: [],
-    crossConnectionIDList: [],
+    itemScopeIdList: [],
+    crossConnectionIdList: [],
     jsonHash: {},
     possibleItemScopeRelationHash: [],
     directCrossConnectionToItemScopeHash: {},
@@ -15,11 +26,12 @@ var analyzer = {
          * @effect adds json scope item to analyzer.JSONRootItemScopeList
          */
 
-        JSONRootItemScopesFromWebpage: function () {
-            var HTMLRootItemScopes = analyzer.extract.helper.HTMLRootItemScopesFromWebpage();
+        JSONRootItemScopesFromWebpage: function (scopeList) {
+            //var HTMLRootItemScopes = analyzer.extract.helper.HTMLRootItemScopesFromWebpage();
+            var HTMLRootItemScopes = scopeList;//analyzer.extract.helper.HTMLRootItemScopesFromWebpage();
             for (var i = 0; i < HTMLRootItemScopes.length; i++) {
                 var HTMLRootItemScope = HTMLRootItemScopes[i];
-                var jsonJSTreeJsonScope = analyzer.transformHTMLItemScopeToJSON(HTMLRootItemScope, analyzer.itemScopeIDList.length);
+                var jsonJSTreeJsonScope = analyzer.transformHTMLItemScopeToJSON(HTMLRootItemScope, analyzer.itemScopeIdList.length);
                 analyzer.JSONRootItemScopeList.push(jsonJSTreeJsonScope);
             }
         },
@@ -48,6 +60,7 @@ var analyzer = {
     },
 
 
+
     /**
      * compares single scope items with all scope Items in List to find possible connections
      * only comparing items from different http sources
@@ -59,99 +72,108 @@ var analyzer = {
         //for (var i = 0; i < analyzer.jsonList.length; i++) {
         Object.keys(analyzer.jsonHash).forEach(function (storageItemKey) {
             var storageItem = analyzer.jsonHash[storageItemKey];
-            if (currentItem['nodeSource'] != storageItem['nodeSource']) {
-                if (currentItem['nodeType'] == storageItem['nodeType']) {
+            if (currentItem['nodeSource'] !== storageItem['nodeSource']) {
+                if (currentItem['nodeType'] === storageItem['nodeType']) {
                     //when same name -> check fore more similarities
-                    if (currentItem['nodeName'] == "" || storageItem['nodeName'] == "" || currentItem['nodeName'] == storageItem['nodeName']) {
+                    if (currentItem['nodeName'] === "" || storageItem['nodeName'] === "" || currentItem['nodeName'] === storageItem['nodeName']) {
                         //when same value -> check fore more similarities
-                        if (currentItem['nodeValue'] == storageItem['nodeValue']) {
-                            if ((currentItem.children != undefined) && ( storageItem.children != undefined)) {
-                                for (var k = 0; k < currentItem.children.length; k++) {
-                                    var currentItemChild = currentItem.children[k];
-                                    for (var l = 0; l < storageItem.children.length; l++) {
-                                        var storageItemChild = storageItem.children[l];
-                                        if (storageItemChild != undefined) {
-                                            if (currentItemChild['nodeName'] != "thumbnailUrl" && currentItemChild['nodeName'] != "url") {
-                                                if (currentItemChild['nodeName'] == storageItemChild['nodeName']) {
-                                                    if (currentItemChild['nodeValue'] != "" && currentItemChild['nodeValue'] == storageItemChild['nodeValue']) {
-                                                        //Sort numbers in an array in ascending order
-                                                        var sortedScopeConnectionIDs = helper.sortAscending([currentItem.scopeID, storageItem.scopeID]);
+                        var cleanCurrentString = helper.toLowerCaseTrimmedSpaces(currentItem['nodeValue']);
+                        var cleanStorageString = helper.toLowerCaseTrimmedSpaces(storageItem['nodeValue']);
+                        if (cleanCurrentString === cleanStorageString) {
+                            analyzer.createDirectConnection(currentItem,storageItem);
+                        }
+                    }
+                }
 
-                                                        //TODO
-                                                        var propertyConnectionIDs = [];
-                                                        if (sortedScopeConnectionIDs[0] === currentItem.scopeID) {
-                                                            propertyConnectionIDs = [currentItemChild['propertyID'], storageItemChild['propertyID']];
-                                                        } else {
-                                                            propertyConnectionIDs = [storageItemChild['propertyID'], currentItemChild['propertyID']];
-                                                        }
-                                                        var joinedScopeConnectionID = sortedScopeConnectionIDs.join('-');
-                                                        var joinedPropertyConnectionID = propertyConnectionIDs.join('-');
+            }
 
-                                                        //add to list if not already exists
-                                                        /**first if should not happen due tu differend source
-                                                         * if (analyzer.relationBetweenItemScopesAndTheirContainedItemScopes.indexOf(joinedScopeConnectionID) < 0 && analyzer.possibleItemScopeRelationList.indexOf(joinedScopeConnectionID) < 0) {
-                                                                    analyzer.possibleItemScopeRelationList.push(joinedScopeConnectionID);
+        });
+    },
+
+    createDirectConnection:function(currentItem,storageItem){
+        if ((currentItem.children !== undefined) && ( storageItem.children !== undefined)) {
+            for (var k = 0; k < currentItem.children.length; k++) {
+                var currentItemChild = currentItem.children[k];
+                for (var l = 0; l < storageItem.children.length; l++) {
+                    var storageItemChild = storageItem.children[l];
+                    if (storageItemChild !== undefined) {
+                        if (currentItemChild['nodeName'] !== "thumbnailUrl" && currentItemChild['nodeName'] !== "url" && currentItemChild['nodeName'] !== "image") {
+                            if (currentItemChild['nodeName'] === storageItemChild['nodeName']) {
+                                var cleanCurrentString = helper.toLowerCaseTrimmedSpaces(currentItemChild['nodeValue']);
+                                var cleanStorageString = helper.toLowerCaseTrimmedSpaces(storageItemChild['nodeValue']);
+                                if (cleanCurrentString !== "" && cleanCurrentString === cleanStorageString) {
+                                    //Sort numbers in an array in ascending order
+                                    var sortedScopeConnectionIds = helper.sortAscending([currentItem.scopeId, storageItem.scopeId]);
+
+                                    //TODO
+                                    var propertyConnectionIds = [];
+                                    if (sortedScopeConnectionIds[0] === currentItem.scopeId) {
+                                        propertyConnectionIds = [currentItemChild['propertyId'], storageItemChild['propertyId']];
+                                    } else {
+                                        propertyConnectionIds = [storageItemChild['propertyId'], currentItemChild['propertyId']];
+                                    }
+                                    var joinedScopeConnectionId = sortedScopeConnectionIds.join('-');
+                                    var joinedPropertyConnectionId = propertyConnectionIds.join('-');
+
+                                    //add to list if not already exists
+                                    /**first if should not happen due tu differend source
+                                     * if (analyzer.relationBetweenItemScopesAndTheirContainedItemScopes.indexOf(joinedScopeConnectionId) < 0 && analyzer.possibleItemScopeRelationList.indexOf(joinedScopeConnectionId) < 0) {
+                                                                    analyzer.possibleItemScopeRelationList.push(joinedScopeConnectionId);
                                                                 }**/
-                                                        //NEW
-                                                        var currentCrossId = -1;
-                                                        var newCrossId = Object.keys(analyzer.directItemScopeToCrossConnectionHash).length;
-                                                        var hasCurrentItemScopeId = analyzer.directItemScopeToCrossConnectionHash.hasOwnProperty(currentItem.scopeID);
-                                                        var hasStorageItemScopeId = analyzer.directItemScopeToCrossConnectionHash.hasOwnProperty(storageItem.scopeID);
-                                                        //find existing cross id
-                                                        if (hasCurrentItemScopeId) {
-                                                            currentCrossId = analyzer.directItemScopeToCrossConnectionHash[currentItem.scopeID];
-                                                        } else {
-                                                            if (hasStorageItemScopeId) {
-                                                                currentCrossId = analyzer.directItemScopeToCrossConnectionHash[storageItem.scopeID];
-                                                            }
-                                                        }
-
-                                                        if (currentCrossId == -1) {
-                                                            currentCrossId = newCrossId;
-                                                        }
-                                                        analyzer.directItemScopeToCrossConnectionHash[currentItem.scopeID] = currentCrossId;
-                                                        analyzer.directItemScopeToCrossConnectionHash[storageItem.scopeID] = currentCrossId;
-
-                                                        var hasCurrentCrossConnectionId = analyzer.directCrossConnectionToItemScopeHash.hasOwnProperty(currentCrossId.toString());
-                                                        if (hasCurrentCrossConnectionId) {
-                                                            var itemScopeIDs = analyzer.directCrossConnectionToItemScopeHash[currentCrossId];
-                                                            if (itemScopeIDs.indexOf(currentItem.scopeID) < 0) {
-                                                                itemScopeIDs.push(currentItem.scopeID);
-                                                            }
-                                                            if (itemScopeIDs.indexOf(storageItem.scopeID) < 0) {
-                                                                itemScopeIDs.push(storageItem.scopeID);
-                                                            }
-
-                                                        } else {
-                                                            analyzer.directCrossConnectionToItemScopeHash[currentCrossId] = [currentItem.scopeID, storageItem.scopeID];
-                                                        }
-                                                        if (analyzer.crossConnectionIDList.indexOf(currentCrossId) < 0) {
-                                                            analyzer.crossConnectionIDList.push(currentCrossId);
-                                                        }
-                                                        if (analyzer.possibleItemScopeRelationHash.hasOwnProperty(joinedScopeConnectionID)) {
-                                                            var possiblePropertyRelationList = analyzer.possibleItemScopeRelationHash[joinedScopeConnectionID];
-                                                            if (possiblePropertyRelationList.indexOf(joinedPropertyConnectionID) < 0) {
-                                                                possiblePropertyRelationList.push(joinedPropertyConnectionID);
-                                                            }
-                                                        } else {
-                                                            analyzer.possibleItemScopeRelationHash[joinedScopeConnectionID] = [joinedPropertyConnectionID];
-                                                        }
-                                                    } else {
-
-                                                    }
-                                                }
-                                            }
+                                    //NEW
+                                    var currentCrossId = -1;
+                                    var newCrossId = Object.keys(analyzer.directItemScopeToCrossConnectionHash).length;
+                                    var hasCurrentItemScopeId = analyzer.directItemScopeToCrossConnectionHash.hasOwnProperty(currentItem.scopeId);
+                                    var hasStorageItemScopeId = analyzer.directItemScopeToCrossConnectionHash.hasOwnProperty(storageItem.scopeId);
+                                    //find existing cross id
+                                    if (hasCurrentItemScopeId) {
+                                        currentCrossId = analyzer.directItemScopeToCrossConnectionHash[currentItem.scopeId];
+                                    } else {
+                                        if (hasStorageItemScopeId) {
+                                            currentCrossId = analyzer.directItemScopeToCrossConnectionHash[storageItem.scopeId];
                                         }
                                     }
+
+                                    if (currentCrossId === -1) {
+                                        currentCrossId = newCrossId;
+                                    }
+                                    analyzer.directItemScopeToCrossConnectionHash[currentItem.scopeId] = currentCrossId;
+                                    analyzer.directItemScopeToCrossConnectionHash[storageItem.scopeId] = currentCrossId;
+
+                                    var hasCurrentCrossConnectionId = analyzer.directCrossConnectionToItemScopeHash.hasOwnProperty(currentCrossId.toString());
+                                    if (hasCurrentCrossConnectionId) {
+                                        var itemScopeIds = analyzer.directCrossConnectionToItemScopeHash[currentCrossId];
+                                        if (itemScopeIds.indexOf(currentItem.scopeId) < 0) {
+                                            itemScopeIds.push(currentItem.scopeId);
+                                        }
+                                        if (itemScopeIds.indexOf(storageItem.scopeId) < 0) {
+                                            itemScopeIds.push(storageItem.scopeId);
+                                        }
+
+                                    } else {
+                                        analyzer.directCrossConnectionToItemScopeHash[currentCrossId] = [currentItem.scopeId, storageItem.scopeId];
+                                    }
+                                    if (analyzer.crossConnectionIdList.indexOf(currentCrossId) < 0) {
+                                        analyzer.crossConnectionIdList.push(currentCrossId);
+                                    }
+                                    if (analyzer.possibleItemScopeRelationHash.hasOwnProperty(joinedScopeConnectionId)) {
+                                        var possiblePropertyRelationList = analyzer.possibleItemScopeRelationHash[joinedScopeConnectionId];
+                                        if (possiblePropertyRelationList.indexOf(joinedPropertyConnectionId) < 0) {
+                                            possiblePropertyRelationList.push(joinedPropertyConnectionId);
+                                        }
+                                    } else {
+                                        analyzer.possibleItemScopeRelationHash[joinedScopeConnectionId] = [joinedPropertyConnectionId];
+                                    }
+                                } else {
 
                                 }
                             }
                         }
                     }
                 }
-            }
 
-        });
+            }
+        }
     },
     mapAllForSemanticReference: function () {
         //for (var i = 0; i < analyzer.jsonList.length; i++) {
@@ -165,69 +187,75 @@ var analyzer = {
 
     },
 
-    transformHTMLItemScopeToJSON: function (itemScope, scopeID) {
+    transformHTMLItemScopeToJSON: function (itemScope, scopeId) {
 
         var jsonScope = analyzer.newJSONTreeNode();
 
-        if (analyzer.itemScopeIDList.indexOf(scopeID) > -1) {
-            console.log("duplicate Scope ID -> something went wrong");
+        if (analyzer.itemScopeIdList.indexOf(scopeId) > -1) {
+            console.log("duplicate Scope Id -> something went wrong");
         }
-        jsonScope.scopeID = scopeID;
+        jsonScope.scopeId = scopeId;
 
         jsonScope.nodeSource = document.location.toString();
         jsonScope.nodeType = itemScope.getAttribute("itemtype");
-        if (itemScope.getAttribute("itemprop") != null) {
+        if (itemScope.getAttribute("itemprop") !== null) {
             jsonScope.nodeName = itemScope.getAttribute("itemprop");
         }
-        var HTMLItemScopeProperties = itemScope.querySelectorAll('[itemprop]');
+        //var HTMLItemScopeProperties = itemScope.querySelectorAll('[itemprop]');
+        var HTMLItemScopeProperties = analyzer.getItemScopeProperties(itemScope);
 
         for (var i = 0; i < HTMLItemScopeProperties.length; i++) {
             var HTMLItemScopeProperty = HTMLItemScopeProperties[i];
-            //if property is new scope
-            if (HTMLItemScopeProperty.getAttribute("itemScope") != null) {
-                analyzer.propertyScopeLength += 1;
-                var propertyScope = analyzer.transformHTMLItemScopeToJSON(HTMLItemScopeProperty, analyzer.itemScopeIDList.length + analyzer.propertyScopeLength);
-                propertyScope.propertyID = i;
-                //TODO see if needed
-                jsonScope.children.push(propertyScope);
-            } else {
-                var propertyName = HTMLItemScopeProperty.getAttribute("itemprop").toString();
-                var propertyValue = "";
-                var valueType = "TEXT";
-                if (HTMLItemScopeProperty.tagName === "IMG") {
-                    propertyValue = HTMLItemScopeProperty.src;
-                    valueType = "IMG";
-                } else if (HTMLItemScopeProperty.tagName === "A") {
-                    propertyValue = HTMLItemScopeProperty.href;
-                    valueType = "A";
+            var spcecialid = HTMLItemScopeProperty.getAttribute("specialid");
+            var index = analyzer.specialIdList.indexOf(parseInt(spcecialid));
+            if (analyzer.withIncludedProperties || (index >= 0)) {
+                analyzer.specialIdList.splice(index, 1);
+                //if property is new scope
+                if (HTMLItemScopeProperty.getAttribute("itemScope") !== null) {
+                    analyzer.propertyScopeLength += 1;
+                    var propertyScope = analyzer.transformHTMLItemScopeToJSON(HTMLItemScopeProperty, analyzer.itemScopeIdList.length + analyzer.propertyScopeLength);
+                    propertyScope.propertyId = i;
+                    //TODO see if needed
+                    jsonScope.children.push(propertyScope);
                 } else {
-                    if (typeof HTMLItemScopeProperty.textContent !== "undefined") {
-                        propertyValue = HTMLItemScopeProperty.textContent;
+                    var propertyName = HTMLItemScopeProperty.getAttribute("itemprop").toString();
+                    var propertyValue = "";
+                    var valueType = "TEXT";
+                    if (HTMLItemScopeProperty.tagName === "IMG") {
+                        propertyValue = HTMLItemScopeProperty.src;
+                        valueType = "IMG";
+                    } else if (HTMLItemScopeProperty.tagName === "A") {
+                        propertyValue = HTMLItemScopeProperty.href;
+                        valueType = "A";
                     } else {
-                        propertyValue = HTMLItemScopeProperty.innerText;
+                        if (typeof HTMLItemScopeProperty.textContent !== "undefined") {
+                            propertyValue = HTMLItemScopeProperty.textContent;
+                        } else {
+                            propertyValue = HTMLItemScopeProperty.innerText;
+                        }
                     }
+                    var jsonProp = analyzer.newJSONTreeNode();
+                    jsonProp.propertyId = i;
+                    jsonProp.nodeName = propertyName;
+                    jsonProp.nodeValue = helper.toLowerCaseTrimmedSpaces(propertyValue);
+                    jsonProp.valueType = valueType;
+                    jsonScope.children.push(jsonProp);
                 }
-                var jsonProp = analyzer.newJSONTreeNode();
-                jsonProp.propertyID = i;
-                jsonProp.nodeName = propertyName;
-                jsonProp.nodeValue = propertyValue;
-                jsonProp.valueType = valueType;
-                jsonScope.children.push(jsonProp);
             }
         }
         if (helper.objectDoesNotExist(jsonScope)) {
 
-            analyzer.jsonHash[scopeID] = jsonScope;
-            analyzer.itemScopeIDList.push(scopeID);
+            analyzer.jsonHash[scopeId] = jsonScope;
+            analyzer.itemScopeIdList.push(scopeId);
             for (var j = 0; j < jsonScope.children.length; j++) {
                 var jsonScopeProperty = jsonScope.children[j];
-                if (jsonScopeProperty.scopeID != undefined) {
+                if (jsonScopeProperty.scopeId !== undefined) {
                     //Sort numbers in an array in ascending order
-                    var itemScopeConnectionID = helper.sortAscending([jsonScope.scopeID, jsonScopeProperty.scopeID]);
-                    var joinedItemScopeConnectionID = itemScopeConnectionID.join('_');
+                    var itemScopeConnectionId = helper.sortAscending([jsonScope.scopeId, jsonScopeProperty.scopeId]);
+                    var joinedItemScopeConnectionId = itemScopeConnectionId.join('_');
                     //add to list if not already exists
-                    if (analyzer.relationBetweenItemScopesAndTheirContainedItemScopes.indexOf(joinedItemScopeConnectionID) < 0) {
-                        analyzer.relationBetweenItemScopesAndTheirContainedItemScopes.push(joinedItemScopeConnectionID);
+                    if (analyzer.relationBetweenItemScopesAndTheirContainedItemScopes.indexOf(joinedItemScopeConnectionId) < 0) {
+                        analyzer.relationBetweenItemScopesAndTheirContainedItemScopes.push(joinedItemScopeConnectionId);
                     }
                 }
             }
@@ -235,6 +263,18 @@ var analyzer = {
         }
         return jsonScope;
     },
+    getItemScopeProperties: function (itemScope) {
+        var specialId = 0;
+
+        var allIncludingDuplicates = itemScope.querySelectorAll('[itemprop]');
+        for (var i = 0; i < allIncludingDuplicates.length; i++) {
+            allIncludingDuplicates[i].setAttribute("specialId", specialId.toString());
+            analyzer.specialIdList.push(specialId);
+            specialId += 1;
+        }
+        return allIncludingDuplicates;
+    },
+
     newJSONTreeNode: function () {
         return {
             //id          : "string" // will be autogenerated if omitted
@@ -242,8 +282,8 @@ var analyzer = {
             nodeName: "",
             nodeValue: "",
             nodeSource: "",
-            scopeID: undefined,
-            propertyID: undefined,
+            scopeId: undefined,
+            propertyId: undefined,
             children: []//,  // array of strings or objects
         };
     }
@@ -269,7 +309,7 @@ var visual = {
         visual.setListStyle(liName);
         visual.setListStyle(liValue);
         var nodeName = jsonScope.nodeName;
-        if (nodeName == "") {
+        if (nodeName === "") {
             var splitList = jsonScope.nodeType.split("/");
             nodeName = splitList[splitList.length - 1];
         } else {
@@ -277,7 +317,8 @@ var visual = {
         }
         var htmlContent = document.createElement("a");
         htmlContent.style.cursor = "pointer";
-        htmlContent.title = "ItemScopeID:" + jsonScope.scopeID;
+        //htmlContent.title = "ItemScopeId:" + jsonScope.scopeId;
+        htmlContent.title = JSON.stringify(jsonScope);
         htmlContent.style.color = "#a9014b";
         if (typeof liType.textContent !== "undefined") {
             htmlContent.textContent = nodeName;
@@ -302,10 +343,10 @@ var visual = {
         for (var i = 0; i < properties.length; i++) {
             var property = properties[i];
             //if property is new scope
-            if (property.nodeType != "") {
+            if (property.nodeType !== "") {
                 var htmlPropertyScope = visual.createHTMLFromJSONScope(property);
                 liType.appendChild(htmlPropertyScope);
-                console.log(htmlPropertyScope);
+                //console.log(htmlPropertyScope);
             } else {
                 var ulPropName = document.createElement("ul");
                 var liPropName = document.createElement("li");
@@ -316,12 +357,12 @@ var visual = {
                 } else {
                     liPropName.innerText = property.nodeName;
                 }
-                if (property.valueType == "IMG") {
+                if (property.valueType === "IMG") {
                     var img = document.createElement("IMG");
                     img.src = property.nodeValue;
                     //liPropValue.appendChild(img);
                     liPropName.appendChild(img);
-                } else if (property.valueType == "A") {
+                } else if (property.valueType === "A") {
                     var a = document.createElement("a");
                     a.href = property.nodeValue;
                     if (typeof a.textContent !== "undefined") {
@@ -353,7 +394,7 @@ var visual = {
     toggleItemScopeView: function (li) {
         //var target = event.target;
         if (li.className === "liType") {
-            if (li.style.display == "none") {
+            if (li.style.display === "none") {
                 li.style.display = "block";
             } else {
                 li.style.display = "none";
@@ -372,18 +413,18 @@ var visual = {
         },
         mappedPossibleConnections: function () {
             var mappingTab = visual.getDisplay("mapping");
-            Object.keys(analyzer.possibleItemScopeRelationHash).forEach(function (possibleJoinedScopeRelationID) {
-                var possibleJoinedScopeRelationIDs = possibleJoinedScopeRelationID.split('-');
-                var possiblePropertyRelationList = analyzer.possibleItemScopeRelationHash[possibleJoinedScopeRelationID];
+            Object.keys(analyzer.possibleItemScopeRelationHash).forEach(function (possibleJoinedScopeRelationId) {
+                var possibleJoinedScopeRelationIds = possibleJoinedScopeRelationId.split('-');
+                var possiblePropertyRelationList = analyzer.possibleItemScopeRelationHash[possibleJoinedScopeRelationId];
                 for (var i = 0; i < possiblePropertyRelationList.length; i++) {
 
-                    var possiblePropertyRelationIDs = possiblePropertyRelationList[i].split('-');
+                    var possiblePropertyRelationIds = possiblePropertyRelationList[i].split('-');
                     var itemScopePropertyConnectionReason = document.createElement("div");
-                    var JSONItemScope1 = analyzer.jsonHash[possibleJoinedScopeRelationIDs[0]];
-                    var JSONItemScope2 = analyzer.jsonHash[possibleJoinedScopeRelationIDs[1]];
+                    var JSONItemScope1 = analyzer.jsonHash[possibleJoinedScopeRelationIds[0]];
+                    var JSONItemScope2 = analyzer.jsonHash[possibleJoinedScopeRelationIds[1]];
                     for (var j = 0; j < JSONItemScope1.children.length; j++) {
                         var property = JSONItemScope1.children[j];
-                        if (property['propertyID'] == parseInt(possiblePropertyRelationIDs[0])) {
+                        if (property['propertyId'] === parseInt(possiblePropertyRelationIds[0])) {
                             if (typeof itemScopePropertyConnectionReason.textContent !== "undefined") {
                                 itemScopePropertyConnectionReason.textContent = property.nodeName + " : " + property.nodeValue;
                             } else {
@@ -394,7 +435,7 @@ var visual = {
                     }
                     var box = document.createElement("div");
                     box.style.border = "1px solid black";
-                    box.style.maxHeight = "150px";
+                    box.style.maxHeight = "450px";
                     box.style.width = "100%";
                     box.style.overflow = "auto";
 
@@ -411,43 +452,58 @@ var visual = {
         semanticMapping: function () {
             var mappingTab = visual.getDisplay("semanticInfo");
 
-            Object.keys(analyzer.directCrossConnectionToItemScopeHash).forEach(function (directCrossConnectionID) {
+            Object.keys(analyzer.directCrossConnectionToItemScopeHash).forEach(function (directCrossConnectionId) {
                 var box = document.createElement("div");
                 box.style.border = "1px solid black";
-                box.style.maxHeight = "150px";
+                box.style.maxHeight = "450px";
                 box.style.width = "100%";
                 box.style.overflow = "auto";
 
 
-                var itemScopeIDs = analyzer.directCrossConnectionToItemScopeHash[directCrossConnectionID];
-                var itemScopeIDsDublicate =  JSON.parse(JSON.stringify(itemScopeIDs));
-                for (var i = 0; i < itemScopeIDsDublicate.length; itemScopeIDsDublicate.splice(0,1)) {
-                    var firstItemScopeID = itemScopeIDsDublicate[i];
+                var itemScopeIds = analyzer.directCrossConnectionToItemScopeHash[directCrossConnectionId];
+                var itemScopeIdsDublicate = JSON.parse(JSON.stringify(itemScopeIds));
+                for (var i = 0; i < itemScopeIdsDublicate.length; itemScopeIdsDublicate.splice(0, 1)) {
+                    var firstItemScopeId = itemScopeIdsDublicate[i];
                     var firstItemScopeCount = 0;
-                    for (var j = i+1; j < itemScopeIDsDublicate.length; j++) {
-                        var secondItemScopeID = itemScopeIDsDublicate[j];
-                        var connectionString = firstItemScopeID+"-"+secondItemScopeID;
-                        console.log(connectionString);
-                        if(analyzer.possibleItemScopeRelationHash.hasOwnProperty(connectionString)){
+                    for (var j = i + 1; j < itemScopeIdsDublicate.length; j++) {
+                        var secondItemScopeId = itemScopeIdsDublicate[j];
+                        var sorted = helper.sortAscending([firstItemScopeId, secondItemScopeId]);
+                        var connectionString = sorted[0] + "-" + sorted[1];
+                        //console.log(connectionString);
+                        if (analyzer.possibleItemScopeRelationHash.hasOwnProperty(connectionString)) {
                             var propertyConnections = analyzer.possibleItemScopeRelationHash[connectionString];
                             var connectionTable = document.createElement("table");
                             var connectionTR = document.createElement("tr");
                             var firstItemScopeTD = document.createElement("td");
                             var connectionTD = document.createElement("td");
                             var secondItemScopeTD = document.createElement("td");
-                            firstItemScopeTD.width ="33%";
-                            connectionTD.width ="33%";
-                            secondItemScopeTD.width ="33%";
+                            firstItemScopeTD.width = "33%";
+                            connectionTD.width = "33%";
+                            secondItemScopeTD.width = "33%";
 
                             connectionTable.appendChild(connectionTR);
                             connectionTR.appendChild(firstItemScopeTD);
                             connectionTR.appendChild(connectionTD);
                             connectionTR.appendChild(secondItemScopeTD);
-                            var connectionLink = document.createElement("a");
-                            var connectionLinkText = propertyConnections.length + "connection";
 
-                            if(propertyConnections.length != 1){
-                                connectionLinkText +="s";
+                            var firstItemScopeUL = visual.createHTMLFromJSONScope(analyzer.jsonHash[firstItemScopeId]);
+                            var secondItemScopeUL = visual.createHTMLFromJSONScope(analyzer.jsonHash[secondItemScopeId]);
+                            var propertyTitleList = "";
+                            var countedPropertyCount = 0;
+                            for (var k = 0; k < propertyConnections.length; k++) {
+                                var propertyConnectionId = propertyConnections[k].split("-")[0];
+                                var propertyObject = analyzer.jsonHash[firstItemScopeId].children[propertyConnectionId];
+                                if (propertyObject.nodeName !== "thumbnailUrl" && propertyObject.nodeName !== "url" && propertyObject['nodeName'] !== "image") {
+                                    countedPropertyCount++;
+                                    propertyTitleList += propertyObject.nodeName + " : " + propertyObject.nodeValue + "\n";
+                                }
+                            }
+
+                            var connectionLink = document.createElement("a");
+                            var connectionLinkText = countedPropertyCount + "connection";
+
+                            if (propertyConnections.length !== 1) {
+                                connectionLinkText += "s";
                             }
                             if (typeof connectionLink.textContent !== "undefined") {
                                 connectionLink.textContent = connectionLinkText;
@@ -457,16 +513,9 @@ var visual = {
 
                             }
                             connectionTD.appendChild(connectionLink);
-                            var firstItemScopeUL = visual.createHTMLFromJSONScope(analyzer.jsonHash[firstItemScopeID]);
-                            var secondItemScopeUL = visual.createHTMLFromJSONScope(analyzer.jsonHash[secondItemScopeID]);
-                            var propertyTitleList = "";
-                            for(var k=0;k< propertyConnections.length;k++){
-                                var propertyConnectionID = propertyConnections[k].split("-")[0];
-                                var propertyObject = analyzer.jsonHash[firstItemScopeID].children[propertyConnectionID];
-                                propertyTitleList += propertyObject.nodeName + " " + propertyObject.nodeValue + "\n";
-                            }
+
                             connectionLink.title = propertyTitleList;
-                            if(firstItemScopeCount ==0){
+                            if (firstItemScopeCount === 0) {
                                 firstItemScopeTD.appendChild(firstItemScopeUL);
                             }
                             firstItemScopeCount++;
@@ -475,7 +524,7 @@ var visual = {
                             box.appendChild(connectionTable);
                         }
                     }
-                    //var htmlUl1 = visual.createHTMLFromJSONScope(analyzer.jsonHash[itemScopeIDs[i]]);
+                    //var htmlUl1 = visual.createHTMLFromJSONScope(analyzer.jsonHash[itemScopeIds[i]]);
                     //box.appendChild(htmlUl1);
                 }
 
@@ -492,44 +541,38 @@ var visual = {
      */
 
     getDisplay: function (name) {
-        if (document.getElementById(name) == undefined) {
+        if (document.getElementById(name) === null) {
             var display = document.createElement("div");
 
-            display.id = "container";
-            display.style.width = "400px";
-            display.style.height = "800px";
-            display.style.overflow = "auto";
+            display.id = "semantic_container";
+            display.style.width = "150px";
+            display.style.height = "30px";
             display.style.position = "fixed";
             display.style.border = "1px solid black";
             display.style.background = "white";
-            display.style.position = "fixed";
             display.style.top = "0";
             display.style.right = "0";
             display.style.zIndex = "999999";
 
             var analysisTab = document.createElement("div");
             analysisTab.id = "analysis";
-            analysisTab.style.width = "400px";
-            analysisTab.style.height = "780px";
-            analysisTab.style.overflow = "auto";
-            analysisTab.style.position = "fixed";
-            analysisTab.style.border = "1px solid black";
+            analysisTab.style.width = "100%";
+            analysisTab.style.height = "779px";
+            analysisTab.style.overflowY = "auto";
+            analysisTab.style.borderTop = "1px solid black";
             analysisTab.style.background = "white";
-            analysisTab.style.position = "fixed";
             analysisTab.style.top = "20px";
             analysisTab.style.right = "0";
             analysisTab.style.backgroundColor = "#2daebf";
-            analysisTab.style.display = 'block';
+            analysisTab.style.display = 'none';
 
             var mappingTab = document.createElement("div");
             mappingTab.id = "mapping";
-            mappingTab.style.width = "400px";
-            mappingTab.style.height = "780px";
-            mappingTab.style.overflow = "auto";
-            mappingTab.style.position = "fixed";
-            mappingTab.style.border = "1px solid black";
+            mappingTab.style.width = "100%";
+            mappingTab.style.height = "779px";
+            mappingTab.style.overflowY = "auto";
+            mappingTab.style.borderTop = "1px solid black";
             mappingTab.style.background = "white";
-            mappingTab.style.position = "fixed";
             mappingTab.style.top = "20px";
             mappingTab.style.right = "0";
             mappingTab.style.backgroundColor = "#91bd09";
@@ -537,45 +580,76 @@ var visual = {
 
             var semanticInfo = document.createElement("div");
             semanticInfo.id = "semanticInfo";
-            semanticInfo.style.width = "400px";
-            semanticInfo.style.height = "780px";
-            semanticInfo.style.overflow = "auto";
-            semanticInfo.style.position = "fixed";
-            semanticInfo.style.border = "1px solid black";
+            semanticInfo.style.width = "100%";
+            semanticInfo.style.height = "779px";
+            semanticInfo.style.overflowY = "auto";
+            semanticInfo.style.borderTop = "1px solid black";
             semanticInfo.style.background = "white";
-            semanticInfo.style.position = "fixed";
             semanticInfo.style.top = "20px";
             semanticInfo.style.right = "0";
             semanticInfo.style.backgroundColor = "#ffb515";
             semanticInfo.style.display = 'none';
 
+            var b0 = document.createElement("div");
             var b1 = document.createElement("div");
             var b2 = document.createElement("div");
             var b3 = document.createElement("div");
+            b0.style.paddingLeft = "20px";
+            b0.style.float = "left";
+            //b0.style.backgroundColor = "#2daebf";
+            b0.style.height = "20px";
+
             b1.style.paddingLeft = "20px";
             b1.style.float = "left";
             b1.style.backgroundColor = "#2daebf";
             b1.style.height = "20px";
+            b1.style.display = "none";
 
             b2.style.paddingLeft = "20px";
             b2.style.float = "left";
             b2.style.backgroundColor = "#91bd09";
             b2.style.height = "18px";
+            b2.style.display = "none";
 
             b3.style.paddingLeft = "20px";
             b3.style.float = "left";
             b3.style.backgroundColor = "#ffb515";
             b3.style.height = "18px";
+            b3.style.display = "none";
 
             if (typeof b1.textContent !== "undefined") {
+                b0.textContent = "semanticWindow";
                 b1.textContent = "analysis";
                 b2.textContent = "mapping";
                 b3.textContent = "schemaInfo";
             } else {
+                b0.innerText = "semanticWindow";
                 b1.innerText = "analysis";
                 b2.innerText = "mapping";
                 b3.innerText = "schemaInfo";
             }
+            b0.onclick = function () {
+                var container = document.getElementById("semantic_container");
+                if (container.style.width === "150px") {
+                    container.style.width = "1024px";
+                    container.style.height = "800px";
+                    b1.style.display = 'block';
+                    b2.style.display = 'block';
+                    b3.style.display = 'block';
+                    analysisTab.style.display = 'block';
+
+                } else {
+                    container.style.width = "150px";
+                    container.style.height = "30px";
+                    b1.style.display = 'none';
+                    b2.style.display = 'none';
+                    b3.style.display = 'none';
+                    analysisTab.style.display = 'none';
+                    mappingTab.style.display = 'none';
+                    semanticInfo.style.display = 'none';
+
+                }
+            };
             b1.onclick = function () {
                 var a = document.getElementById("analysis");
                 a.style.display = 'block';
@@ -609,6 +683,7 @@ var visual = {
                 c.style.display = 'block';
                 b3.style.height = "20px";
             };
+            display.appendChild(b0);
             display.appendChild(b1);
             display.appendChild(b2);
             display.appendChild(b3);
@@ -634,7 +709,7 @@ var storage = {
      */
     resetLocalStorage: function () {
         localStorage.setItem("jsonHash", JSON.stringify({}));
-        localStorage.setItem("itemScopeIDList", JSON.stringify([]));
+        localStorage.setItem("itemScopeIdList", JSON.stringify([]));
         localStorage.setItem("relationBetweenItemScopesAndTheirContainedItemScopes", JSON.stringify([]));
         localStorage.setItem("possibleItemScopeRelationHash", JSON.stringify({}));
         localStorage.setItem("directCrossConnectionToItemScopeHash", JSON.stringify({}));
@@ -649,7 +724,7 @@ var storage = {
      */
     readFromLocalStorage: function () {
         analyzer.jsonHash = JSON.parse(localStorage.getItem("jsonHash")) || {};
-        analyzer.itemScopeIDList = JSON.parse(localStorage.getItem("itemScopeIDList")) || [];
+        analyzer.itemScopeIdList = JSON.parse(localStorage.getItem("itemScopeIdList")) || [];
         analyzer.relationBetweenItemScopesAndTheirContainedItemScopes = JSON.parse(localStorage.getItem("relationBetweenItemScopesAndTheirContainedItemScopes")) || [];
         analyzer.possibleItemScopeRelationHash = JSON.parse(localStorage.getItem("possibleItemScopeRelationHash")) || {};
         analyzer.directCrossConnectionToItemScopeHash = JSON.parse(localStorage.getItem("directCrossConnectionToItemScopeHash")) || {};
@@ -663,7 +738,7 @@ var storage = {
     writeToLocalStorage: function () {
         //create json object from local storage
         localStorage.setItem("jsonHash", JSON.stringify(analyzer.jsonHash));
-        localStorage.setItem("itemScopeIDList", JSON.stringify(analyzer.itemScopeIDList));
+        localStorage.setItem("itemScopeIdList", JSON.stringify(analyzer.itemScopeIdList));
         localStorage.setItem("relationBetweenItemScopesAndTheirContainedItemScopes", JSON.stringify(analyzer.relationBetweenItemScopesAndTheirContainedItemScopes));
         localStorage.setItem("possibleItemScopeRelationHash", JSON.stringify(analyzer.possibleItemScopeRelationHash));
         localStorage.setItem("directCrossConnectionToItemScopeHash", JSON.stringify(analyzer.directCrossConnectionToItemScopeHash));
@@ -673,26 +748,82 @@ var storage = {
 
 var run = {
     run: function () {
+        console.time('run');
+
+        run.localStorageToJavaScript();
         run.analysis();
-        run.updateLocalStorage();
+        run.mapping();
+        run.rendering();
+        run.javaScripToLocalStorage();
+        console.timeEnd('run');
     },
     analysis: function () {
-        storage.readFromLocalStorage();
-        analyzer.extract.JSONRootItemScopesFromWebpage();
-        analyzer.mapAllForSemanticReference();
-        visual.render.analyzedItemsFromItemList();
-        visual.render.mappedPossibleConnections();
-        visual.render.semanticMapping();
+        console.log("START analysis");
+
+        console.log("--------------");
+        console.time('analysis');
+        console.log("analyzing : extracting data from webpage");
+        analyzer.extract.JSONRootItemScopesFromWebpage(analyzer.extract.helper.HTMLRootItemScopesFromWebpage());
+        console.timeEnd('analysis');
+        console.log("------------");
+        console.log("END analysis");
     },
-    updateLocalStorage: function () {
+    mapping: function(){
+        console.log("START mapping");
+        console.log("-------------");
+        console.time('mapping');
+        console.log("mappping : find connections between references");
+        analyzer.mapAllForSemanticReference();
+        console.timeEnd('mapping');
+        console.log("-----------");
+        console.log("END mapping");
+
+    },
+    rendering : function(){
+        console.log("START rendering");
+        console.log("---------------");
+        console.time('rendering');
+        console.time('analyzedItemsFromItemList');
+        visual.render.analyzedItemsFromItemList();
+        console.timeEnd('analyzedItemsFromItemList');
+        console.time('mappedPossibleConnections');
+        visual.render.mappedPossibleConnections();
+        console.timeEnd('mappedPossibleConnections');
+        console.time('semanticMapping');
+        visual.render.semanticMapping();
+        console.timeEnd('semanticMapping');
+        console.timeEnd('rendering');
+        console.log("-------------");
+        console.log("END rendering");
+    },
+    localStorageToJavaScript: function(){
+        console.log("START : read from LocalStorage store in JS");
+        console.time('localStorageToJavaScript');
+        storage.readFromLocalStorage();
+        console.timeEnd('localStorageToJavaScript');
+        console.log("END : read from LocalStorage store in JS");
+    },
+    javaScripToLocalStorage: function () {
+        console.log("START : update LocalStorage from code");
+        console.time('javaScripToLocalStorage');
         storage.writeToLocalStorage();
+        console.timeEnd('javaScripToLocalStorage');
+        console.log("END : update LocalStorage from code");
     },
     deleteLocalStorage: function () {
+        console.log("START : delete LocalStorage");
+        console.time('deleteLocalStorage');
         storage.resetLocalStorage();
+        console.timeEnd('deleteLocalStorage');
+        console.log("END : delete LocalStorage");
     }
 
+    
 };
 var helper = {
+    toLowerCaseTrimmedSpaces:function(string){
+        return string.toLowerCase().replace(/\s+/g,' ').replace(/^\s+|\s+$/,'')
+    },
     objectDoesNotExist: function (currentItem) {
 
         var doesNotExists = true;
@@ -700,26 +831,33 @@ var helper = {
             var storageItem = analyzer.jsonHash[currentItemKey];
             //var currentItem = currentList[i];
             //when same source -> check fore more similarities
-            if (currentItem != undefined && storageItem != undefined) {
-                if (currentItem['nodeSource'] == storageItem['nodeSource']) {
+            if (currentItem !== undefined && storageItem !== undefined) {
+                if (currentItem['nodeSource'] === storageItem['nodeSource']) {
                     //when same type -> compare properties
-                    if (currentItem['nodeType'] == storageItem['nodeType']) {
+                    if (currentItem['nodeType'] === storageItem['nodeType']) {
                         //when same name -> check fore more similarities
-                        if (currentItem['nodeName'] == storageItem['nodeName']) {
+                        if (currentItem['nodeName'] === storageItem['nodeName']) {
                             //when same value -> check fore more similarities
-                            if (currentItem['nodeValue'] == storageItem['nodeValue']) {
+                            var cleanCurrentItemNodeValue = helper.toLowerCaseTrimmedSpaces(currentItem['nodeValue']);
+                            var cleanStorageItemNodeValue = helper.toLowerCaseTrimmedSpaces(storageItem['nodeValue']);
+                            if (cleanCurrentItemNodeValue === cleanStorageItemNodeValue) {
                                 //if children (properties) exist and are same length compare
-                                if ((currentItem.children != undefined) && ( storageItem.children != undefined)) {
-                                    var cLength = currentItem.children.length;
-                                    var sLength = storageItem.children.length;
+                                var currentChildren = currentItem.children;
+                                var storageChildren = storageItem.children;
+                                if ((currentChildren !== undefined) && ( storageChildren !== undefined)) {
+                                    var cLength = currentChildren.length;
+                                    var sLength = storageChildren.length;
 
                                     if (cLength > 0 && sLength > 0) {
-                                        if (cLength == sLength) {
+                                        if (cLength === sLength) {
 
-                                            if (cLength == 1) {//nodeName == url and no name propertie exists
-                                                if (currentItem.children[0].nodeType == storageItem.children[0].nodeType) {
-                                                    if (currentItem.children[0].nodeName == storageItem.children[0].nodeName) {
-                                                        if (currentItem.children[0].nodeValue == storageItem.children[0].nodeValue) {
+                                            if (cLength === 1) {//nodeName === url and no name propertie exists
+                                                if (currentChildren[0]['nodeType'] === storageChildren[0]['nodeType']) {
+                                                    if (currentChildren[0]['nodeName'] === storageChildren[0]['nodeName']) {
+                                                        var cleanCurrentItemChildNodeValue = helper.toLowerCaseTrimmedSpaces(currentChildren[0]['nodeValue']);
+                                                        var cleanStorageItemChildNodeValue = helper.toLowerCaseTrimmedSpaces(storageChildren[0]['nodeValue']);
+
+                                                        if (cleanCurrentItemChildNodeValue === cleanStorageItemChildNodeValue) {
                                                             doesNotExists = false;
                                                             return doesNotExists;
                                                         }
@@ -729,28 +867,23 @@ var helper = {
                                                 //compare name properties for final comparison
                                                 var duplicatePropertyCount = 0;
                                                 for (var j = 0; j < cLength; j++) {
-                                                    var currentNode = currentItem.children[j];
-                                                    if (currentNode['nodeName'] == "thumbnailUrl" || currentNode['nodeName'] == "url") {
+                                                    if (currentChildren[j]['nodeName'] === "thumbnailUrl" || currentChildren[j]['nodeName'] === "url" || currentChildren[j]['nodeName'] === "image") {
                                                         duplicatePropertyCount += 1;
                                                     } else {
                                                         for (var k = 0; k < sLength; k++) {
-                                                            var storageNode = storageItem.children[k];
-
-                                                            if (currentNode['nodeName'] == storageNode['nodeName']) {
-                                                                if (currentNode['nodeValue'] == storageNode['nodeValue']) {
-                                                                    //currentList.indexOf(currentItem)
+                                                            if (currentChildren[j]['nodeName'] === storageChildren[k]['nodeName']) {
+                                                                var cleanCurrentItemChildNodeValue = helper.toLowerCaseTrimmedSpaces(currentChildren[j]['nodeValue']);
+                                                                var cleanStorageItemChildNodeValue = helper.toLowerCaseTrimmedSpaces(storageChildren[k]['nodeValue']);
+                                                                if (cleanCurrentItemChildNodeValue === cleanStorageItemChildNodeValue) {
                                                                     duplicatePropertyCount += 1;
                                                                     break;
-                                                                } else {
-
                                                                 }
                                                             }
                                                         }
                                                     }
                                                     //if all properties are the same -> ignore item
-
                                                 }
-                                                if (duplicatePropertyCount == sLength) {
+                                                if (duplicatePropertyCount === sLength) {
                                                     doesNotExists = false;
                                                     return doesNotExists;
                                                 }
