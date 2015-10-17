@@ -163,7 +163,7 @@ var analyzer = {
                                     } else {
                                         itemScopeIds = [currentItem.scopeId, storageItem.scopeId];
                                     }
-                                    analyzer.directCrossConnectionToItemScopeHash[currentCrossId] = helper.sortAscending(itemScopeIds)
+                                    analyzer.directCrossConnectionToItemScopeHash[currentCrossId] = helper.sortAscending(itemScopeIds);
 
                                     if (analyzer.possibleItemScopeRelationHash.hasOwnProperty(joinedScopeConnectionId)) {
                                         var possiblePropertyRelationList = analyzer.possibleItemScopeRelationHash[joinedScopeConnectionId];
@@ -230,7 +230,7 @@ var analyzer = {
                     var propertyValue = "";
                     var valueType = "TEXT";
                     if (HTMLItemScopeProperty.tagName === "IMG") {
-                        propertyValue = HTMLItemScopeProperty.src;
+                        propertyValue = "#";//HTMLItemScopeProperty.src;
                         valueType = "IMG";
                     } else if (HTMLItemScopeProperty.tagName === "A") {
                         propertyValue = HTMLItemScopeProperty.href;
@@ -272,7 +272,6 @@ var analyzer = {
                     } else {
                         analyzer.itemScopesToContainedItemScopes[scopeId] = [propertyScopeId];
                     }
-
                     if (analyzer.itemScopesToContainedItemScopes.hasOwnProperty(propertyScopeId)) {
                         var relationList = analyzer.itemScopesToContainedItemScopes[propertyScopeId];
                         if (relationList.indexOf(scopeId) < 0) {
@@ -322,6 +321,9 @@ var visual = {
         htmlElement.style.margin = 0;
     },
     createHTMLFromJSONScope: function (jsonScope) {
+        if (jsonScope === undefined) {
+            console.log("something went wrong: undefined jsonSope");
+        }
         var ul = document.createElement("ul");
         var ulType = document.createElement("ul");
         var liType = document.createElement("li");
@@ -383,7 +385,7 @@ var visual = {
         var newScope = true;
         for (var i = 0; i < properties.length; i++) {
             var property = properties[i];
-            if(property.nodeName === "name" && newScope ){
+            if (property.nodeName === "name" && newScope) {
                 browserLink.innerText += property.nodeValue;
                 newScope = false;
             }
@@ -405,7 +407,7 @@ var visual = {
                 }
                 if (property.valueType === "IMG") {
                     var img = document.createElement("IMG");
-                    img.src = property.nodeValue;
+                    img.src = "#";//property.nodeValue;
                     //liPropValue.appendChild(img);
                     liPropName.appendChild(img);
                 } else if (property.valueType === "A") {
@@ -587,8 +589,6 @@ var visual = {
                             box.appendChild(connectionTable);
                         }
                     }
-                    //var htmlUl1 = visual.createHTMLFromJSONScope(analyzer.jsonHash[itemScopeIds[i]]);
-                    //box.appendChild(htmlUl1);
                 }
 
                 directCrossConnectionBox.appendChild(box);
@@ -597,14 +597,15 @@ var visual = {
         },
         relationsForItemScope: function (itemScope) {
             var browserBox = visual.getDisplay("Browser");
+            var listManager = [];
             browserBox.innerHTML = "";
             helper.toggleTab("Browser");
-            var mainItemScopeUL = visual.createHTMLFromJSONScope(itemScope);
-            browserBox.appendChild(mainItemScopeUL);
+            //var mainItemScopeUL = visual.createHTMLFromJSONScope(itemScope);
+            //browserBox.appendChild(mainItemScopeUL);
             var itemScopeId = itemScope.scopeId;
 
             //render direct connection
-            visual.render.renderBox(browserBox, itemScopeId,"direct_connection");
+            visual.render.renderBox(browserBox, itemScopeId, "direct_connection", listManager);
             //render cross connection
             var hasCrossConnection = analyzer.directItemScopeToCrossConnectionHash.hasOwnProperty(itemScopeId);
             if (hasCrossConnection) {
@@ -612,35 +613,49 @@ var visual = {
                 var itemScopeIdList = analyzer.directCrossConnectionToItemScopeHash[crossConnectionId];
                 var listLength = itemScopeIdList.length;
                 for (var i = 0; i < listLength; i++) {
-                    visual.render.renderBox(browserBox, itemScopeIdList[i],"cross_connection");
+                    visual.render.renderBox(browserBox, itemScopeIdList[i], "cross_connection", listManager);
                 }
             }
 
         },
-        renderBox: function (browserBox,itemScopeId,name) {
+        renderBox: function (browserBox, itemScopeId, name, listManager) {
             var box = document.createElement("div");
             box.style.border = "1px dotted black";
             var directRelations = analyzer.itemScopesToContainedItemScopes[itemScopeId];
+            if(directRelations !== undefined){
+                var itemScope = analyzer.jsonHash[itemScopeId];
+                browserBox.appendChild(visual.createHTMLFromJSONScope(itemScope));
+                box.innerText = name;
+                for (var j = 0; j < directRelations.length; j++) {
+                    if(j==0){
+                        relItemScope
+                    }
+                    var relItemScope = analyzer.jsonHash[directRelations[j]];
+                    if (relItemScope !== undefined) {
+                        if (listManager.indexOf(relItemScope.scopeId) < 0) {
+                            listManager.push(relItemScope.scopeId);
+                            var relItemScopeUL = visual.createHTMLFromJSONScope(relItemScope);
+                            box.appendChild(relItemScopeUL);
+                        }
+                    }
+                }
+                if(box.innerText!=="cross_connection"){
 
-            for (var j = 0; j < directRelations.length; j++) {
-                var relItemScope = analyzer.jsonHash[directRelations[j]];
-                var relItemScopeUL = visual.createHTMLFromJSONScope(relItemScope);
-
-                box.appendChild(relItemScopeUL);
+                    browserBox.appendChild(box);
+                }
             }
-            browserBox.appendChild(box);
-            return browserBox;
+
         }
     },
 
     /**
      * creates the analyzer display and returns the wanted display tab
-     * @param name : id of display tab div as string
+     * @param nameVar : id of display tab div as string
      * @returns {HTMLElement}
      */
 
-    getDisplay: function (name) {
-        name = name + "Box";
+    getDisplay: function (nameVar) {
+        var name = nameVar + "Box";
         if (document.getElementById(name) === null) {
             var display = document.createElement("div");
 
