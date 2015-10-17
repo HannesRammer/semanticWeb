@@ -8,17 +8,16 @@
 // @grant        none
 // ==/UserScript==
 var analyzer = {
-    withIncludedProperties:true,
+    itemScopesToContainedItemScopes: {},
+    withIncludedProperties: true,
     specialIdList: [],
     JSONRootItemScopeList: [],
     HTMLRootItemScopeList: [],
     itemScopeIdList: [],
-    crossConnectionIdList: [],
     jsonHash: {},
     possibleItemScopeRelationHash: [],
     directCrossConnectionToItemScopeHash: {},
     directItemScopeToCrossConnectionHash: {},
-    relationBetweenItemScopesAndTheirContainedItemScopes: [],
     propertyScopeLength: 0,
     extract: {
         /**
@@ -60,7 +59,6 @@ var analyzer = {
     },
 
 
-
     /**
      * compares single scope items with all scope Items in List to find possible connections
      * only comparing items from different http sources
@@ -72,15 +70,26 @@ var analyzer = {
         //for (var i = 0; i < analyzer.jsonList.length; i++) {
         Object.keys(analyzer.jsonHash).forEach(function (storageItemKey) {
             var storageItem = analyzer.jsonHash[storageItemKey];
-            if (currentItem['nodeSource'] !== storageItem['nodeSource']) {
+            //if (currentItem['nodeSource'] !== storageItem['nodeSource']) {
+            if (currentItem['scopeId'] !== storageItem['scopeId']) {
                 if (currentItem['nodeType'] === storageItem['nodeType']) {
                     //when same name -> check fore more similarities
-                    if (currentItem['nodeName'] === "" || storageItem['nodeName'] === "" || currentItem['nodeName'] === storageItem['nodeName']) {
+                    var cNodeName = currentItem['nodeName'];
+                    var sNodeName = storageItem['nodeName'];
+                    var emptyName = cNodeName === "" || sNodeName === "";
+                    var sameName = cNodeName === sNodeName;
+                    var isPlural = false;
+                    if (cNodeName + "s" === sNodeName || cNodeName === sNodeName + "s") {
+                        isPlural = true;
+                    }
+
+                    if (emptyName || sameName || isPlural) {
                         //when same value -> check fore more similarities
+
                         var cleanCurrentString = helper.toLowerCaseTrimmedSpaces(currentItem['nodeValue']);
                         var cleanStorageString = helper.toLowerCaseTrimmedSpaces(storageItem['nodeValue']);
                         if (cleanCurrentString === cleanStorageString) {
-                            analyzer.createDirectConnection(currentItem,storageItem);
+                            analyzer.createDirectConnection(currentItem, storageItem);
                         }
                     }
                 }
@@ -90,15 +99,16 @@ var analyzer = {
         });
     },
 
-    createDirectConnection:function(currentItem,storageItem){
+    createDirectConnection: function (currentItem, storageItem) {
         if ((currentItem.children !== undefined) && ( storageItem.children !== undefined)) {
             for (var k = 0; k < currentItem.children.length; k++) {
                 var currentItemChild = currentItem.children[k];
+                var currentItemChildNodeName = currentItemChild['nodeName'];
                 for (var l = 0; l < storageItem.children.length; l++) {
                     var storageItemChild = storageItem.children[l];
                     if (storageItemChild !== undefined) {
-                        if (currentItemChild['nodeName'] !== "thumbnailUrl" && currentItemChild['nodeName'] !== "url" && currentItemChild['nodeName'] !== "image") {
-                            if (currentItemChild['nodeName'] === storageItemChild['nodeName']) {
+                        if (currentItemChildNodeName !== "thumbnailUrl" && currentItemChildNodeName !== "url" && currentItemChildNodeName !== "image" && currentItemChildNodeName !== "provider") {
+                            if (currentItemChildNodeName === storageItemChild['nodeName']) {
                                 var cleanCurrentString = helper.toLowerCaseTrimmedSpaces(currentItemChild['nodeValue']);
                                 var cleanStorageString = helper.toLowerCaseTrimmedSpaces(storageItemChild['nodeValue']);
                                 if (cleanCurrentString !== "" && cleanCurrentString === cleanStorageString) {
@@ -116,10 +126,10 @@ var analyzer = {
                                     var joinedPropertyConnectionId = propertyConnectionIds.join('-');
 
                                     //add to list if not already exists
-                                    /**first if should not happen due tu differend source
-                                     * if (analyzer.relationBetweenItemScopesAndTheirContainedItemScopes.indexOf(joinedScopeConnectionId) < 0 && analyzer.possibleItemScopeRelationList.indexOf(joinedScopeConnectionId) < 0) {
-                                                                    analyzer.possibleItemScopeRelationList.push(joinedScopeConnectionId);
-                                                                }**/
+                                    //first if should not happen due tu differend source
+                                    //  if (analyzer.relationBetweenItemScopesAndTheirContainedItemScopes.indexOf(joinedScopeConnectionId) < 0 && analyzer.possibleItemScopeRelationList.indexOf(joinedScopeConnectionId) < 0) {
+                                    //                              analyzer.possibleItemScopeRelationList.push(joinedScopeConnectionId);
+                                    //                        }
                                     //NEW
                                     var currentCrossId = -1;
                                     var newCrossId = Object.keys(analyzer.directItemScopeToCrossConnectionHash).length;
@@ -141,8 +151,8 @@ var analyzer = {
                                     analyzer.directItemScopeToCrossConnectionHash[storageItem.scopeId] = currentCrossId;
 
                                     var hasCurrentCrossConnectionId = analyzer.directCrossConnectionToItemScopeHash.hasOwnProperty(currentCrossId.toString());
+                                    var itemScopeIds = analyzer.directCrossConnectionToItemScopeHash[currentCrossId];
                                     if (hasCurrentCrossConnectionId) {
-                                        var itemScopeIds = analyzer.directCrossConnectionToItemScopeHash[currentCrossId];
                                         if (itemScopeIds.indexOf(currentItem.scopeId) < 0) {
                                             itemScopeIds.push(currentItem.scopeId);
                                         }
@@ -151,11 +161,10 @@ var analyzer = {
                                         }
 
                                     } else {
-                                        analyzer.directCrossConnectionToItemScopeHash[currentCrossId] = [currentItem.scopeId, storageItem.scopeId];
+                                        itemScopeIds = [currentItem.scopeId, storageItem.scopeId];
                                     }
-                                    if (analyzer.crossConnectionIdList.indexOf(currentCrossId) < 0) {
-                                        analyzer.crossConnectionIdList.push(currentCrossId);
-                                    }
+                                    analyzer.directCrossConnectionToItemScopeHash[currentCrossId] = helper.sortAscending(itemScopeIds)
+
                                     if (analyzer.possibleItemScopeRelationHash.hasOwnProperty(joinedScopeConnectionId)) {
                                         var possiblePropertyRelationList = analyzer.possibleItemScopeRelationHash[joinedScopeConnectionId];
                                         if (possiblePropertyRelationList.indexOf(joinedPropertyConnectionId) < 0) {
@@ -171,7 +180,6 @@ var analyzer = {
                         }
                     }
                 }
-
             }
         }
     },
@@ -180,11 +188,11 @@ var analyzer = {
         var currentItemCount = 0;
         Object.keys(analyzer.jsonHash).forEach(function (currentItemKey) {
             var currentItem = analyzer.jsonHash[currentItemKey];
+
             analyzer.createPossibleConnectionsBetweenScopeItemAndList(currentItem);
             //when same source -> check fore more similarities
             currentItemCount += 1;
         });
-
     },
 
     transformHTMLItemScopeToJSON: function (itemScope, scopeId) {
@@ -250,13 +258,31 @@ var analyzer = {
             for (var j = 0; j < jsonScope.children.length; j++) {
                 var jsonScopeProperty = jsonScope.children[j];
                 if (jsonScopeProperty.scopeId !== undefined) {
+                    var scopeId = jsonScope.scopeId;
+                    var propertyScopeId = jsonScopeProperty.scopeId;
                     //Sort numbers in an array in ascending order
-                    var itemScopeConnectionId = helper.sortAscending([jsonScope.scopeId, jsonScopeProperty.scopeId]);
-                    var joinedItemScopeConnectionId = itemScopeConnectionId.join('_');
+                    //var itemScopeConnectionId = helper.sortAscending([scopeId, propertyScopeId]);
                     //add to list if not already exists
-                    if (analyzer.relationBetweenItemScopesAndTheirContainedItemScopes.indexOf(joinedItemScopeConnectionId) < 0) {
-                        analyzer.relationBetweenItemScopesAndTheirContainedItemScopes.push(joinedItemScopeConnectionId);
+
+                    if (analyzer.itemScopesToContainedItemScopes.hasOwnProperty(scopeId)) {
+                        var relationList = analyzer.itemScopesToContainedItemScopes[scopeId];
+                        if (relationList.indexOf(propertyScopeId) < 0) {
+                            relationList.push(propertyScopeId);
+                        }
+                    } else {
+                        analyzer.itemScopesToContainedItemScopes[scopeId] = [propertyScopeId];
                     }
+
+                    if (analyzer.itemScopesToContainedItemScopes.hasOwnProperty(propertyScopeId)) {
+                        var relationList = analyzer.itemScopesToContainedItemScopes[propertyScopeId];
+                        if (relationList.indexOf(scopeId) < 0) {
+                            relationList.push(scopeId);
+                        }
+                    } else {
+                        analyzer.itemScopesToContainedItemScopes[propertyScopeId] = [scopeId];
+                    }
+
+
                 }
             }
             analyzer.propertyScopeLength = 0;
@@ -315,33 +341,53 @@ var visual = {
         } else {
 
         }
+        nodeName = "ID:" + jsonScope.scopeId + " " + nodeName;
         var htmlContent = document.createElement("a");
+        var browserLink = document.createElement("a");
         htmlContent.style.cursor = "pointer";
         //htmlContent.title = "ItemScopeId:" + jsonScope.scopeId;
         htmlContent.title = JSON.stringify(jsonScope);
         htmlContent.style.color = "#a9014b";
+
         if (typeof liType.textContent !== "undefined") {
             htmlContent.textContent = nodeName;
+            browserLink.textContent = "->";
             liType.textContent = jsonScope.nodeType;
             liValue.textContent = jsonScope.nodeValue;
         } else {
             htmlContent.innerText = nodeName;
+            browserLink.innerText = "->";
             liType.innerText = jsonScope.nodeType;
             liValue.innerText = jsonScope.nodeValue;
         }
         liName.appendChild(htmlContent);
-        ul.appendChild(liName);
+        liName.appendChild(browserLink);
+
 
         htmlContent.onclick = function () {
             visual.toggleItemScopeView(liType);
         };
-        liName.appendChild(ulType);
         ulType.appendChild(liType);
+        liName.appendChild(ulType);
+        ul.appendChild(liName);
+        browserLink.onclick = function () {
+            console.time('browser');
+            visual.render.relationsForItemScope(jsonScope);
+            console.timeEnd('browser');
+
+        };
+
 
         //liType.appendChild(liChildren);
         var properties = jsonScope.children;
+        var newScope = true;
         for (var i = 0; i < properties.length; i++) {
             var property = properties[i];
+            if(property.nodeName === "name" && newScope ){
+                browserLink.innerText += property.nodeValue;
+                newScope = false;
+            }
+
             //if property is new scope
             if (property.nodeType !== "") {
                 var htmlPropertyScope = visual.createHTMLFromJSONScope(property);
@@ -403,27 +449,30 @@ var visual = {
 
     },
     render: {
-        analyzedItemsFromItemList: function () {
-            var analysisTab = visual.getDisplay("analysis");
+        currentWebPageItems: function () {
+            var webPageBox = visual.getDisplay("WebPage");
             for (var i = 0; i < analyzer.JSONRootItemScopeList.length; i++) {
                 var item = analyzer.JSONRootItemScopeList[i];
                 var htmlUl = visual.createHTMLFromJSONScope(item);
-                analysisTab.appendChild(htmlUl);
+                webPageBox.appendChild(htmlUl);
             }
         },
-        mappedPossibleConnections: function () {
-            var mappingTab = visual.getDisplay("mapping");
+        directConnections: function () {
+            var directConnectionBox = visual.getDisplay("DirectConnection");
             Object.keys(analyzer.possibleItemScopeRelationHash).forEach(function (possibleJoinedScopeRelationId) {
                 var possibleJoinedScopeRelationIds = possibleJoinedScopeRelationId.split('-');
                 var possiblePropertyRelationList = analyzer.possibleItemScopeRelationHash[possibleJoinedScopeRelationId];
-                for (var i = 0; i < possiblePropertyRelationList.length; i++) {
+                var possiblePropertyRelationListLength = possiblePropertyRelationList.length;
+                for (var i = 0; i < possiblePropertyRelationListLength; i++) {
 
                     var possiblePropertyRelationIds = possiblePropertyRelationList[i].split('-');
                     var itemScopePropertyConnectionReason = document.createElement("div");
                     var JSONItemScope1 = analyzer.jsonHash[possibleJoinedScopeRelationIds[0]];
                     var JSONItemScope2 = analyzer.jsonHash[possibleJoinedScopeRelationIds[1]];
-                    for (var j = 0; j < JSONItemScope1.children.length; j++) {
-                        var property = JSONItemScope1.children[j];
+                    var children1 = JSONItemScope1.children;
+                    var children1Length = children1.length;
+                    for (var j = 0; j < children1Length; j++) {
+                        var property = children1[j];
                         if (property['propertyId'] === parseInt(possiblePropertyRelationIds[0])) {
                             if (typeof itemScopePropertyConnectionReason.textContent !== "undefined") {
                                 itemScopePropertyConnectionReason.textContent = property.nodeName + " : " + property.nodeValue;
@@ -445,12 +494,12 @@ var visual = {
                     box.appendChild(itemScopePropertyConnectionReason);
                     box.appendChild(htmlUl1);
                     box.appendChild(htmlUl2);
-                    mappingTab.appendChild(box);
+                    directConnectionBox.appendChild(box);
                 }
             });
         },
-        semanticMapping: function () {
-            var mappingTab = visual.getDisplay("semanticInfo");
+        directCrossConnection: function () {
+            var directCrossConnectionBox = visual.getDisplay("DirectCrossConnection");
 
             Object.keys(analyzer.directCrossConnectionToItemScopeHash).forEach(function (directCrossConnectionId) {
                 var box = document.createElement("div");
@@ -463,6 +512,7 @@ var visual = {
                 var itemScopeIds = analyzer.directCrossConnectionToItemScopeHash[directCrossConnectionId];
                 var itemScopeIdsDublicate = JSON.parse(JSON.stringify(itemScopeIds));
                 for (var i = 0; i < itemScopeIdsDublicate.length; itemScopeIdsDublicate.splice(0, 1)) {
+
                     var firstItemScopeId = itemScopeIdsDublicate[i];
                     var firstItemScopeCount = 0;
                     for (var j = i + 1; j < itemScopeIdsDublicate.length; j++) {
@@ -477,23 +527,37 @@ var visual = {
                             var firstItemScopeTD = document.createElement("td");
                             var connectionTD = document.createElement("td");
                             var secondItemScopeTD = document.createElement("td");
-                            firstItemScopeTD.width = "33%";
-                            connectionTD.width = "33%";
-                            secondItemScopeTD.width = "33%";
-
+                            firstItemScopeTD.width = "45%";
+                            connectionTD.width = "10%";
+                            secondItemScopeTD.width = "45%";
+                            connectionTable.style.width = "100%";
+                            connectionTable.style.border = "1px dotted black";
                             connectionTable.appendChild(connectionTR);
                             connectionTR.appendChild(firstItemScopeTD);
                             connectionTR.appendChild(connectionTD);
                             connectionTR.appendChild(secondItemScopeTD);
 
+                            var div1 = document.createElement("div");
+                            var div2 = document.createElement("div");
+                            div1.style.overflow = "auto";
+                            div2.style.overflow = "auto";
+                            div1.style.width = "400px";
+                            div2.style.width = "400px";
+                            div1.style.maxHeight = "200px";
+                            div2.style.maxHeight = "200px";
+
                             var firstItemScopeUL = visual.createHTMLFromJSONScope(analyzer.jsonHash[firstItemScopeId]);
                             var secondItemScopeUL = visual.createHTMLFromJSONScope(analyzer.jsonHash[secondItemScopeId]);
+
+                            div1.appendChild(firstItemScopeUL);
+                            div2.appendChild(secondItemScopeUL);
                             var propertyTitleList = "";
                             var countedPropertyCount = 0;
                             for (var k = 0; k < propertyConnections.length; k++) {
                                 var propertyConnectionId = propertyConnections[k].split("-")[0];
                                 var propertyObject = analyzer.jsonHash[firstItemScopeId].children[propertyConnectionId];
-                                if (propertyObject.nodeName !== "thumbnailUrl" && propertyObject.nodeName !== "url" && propertyObject['nodeName'] !== "image") {
+                                var propertyObjectNodeName = propertyObject['nodeName'];
+                                if (propertyObjectNodeName !== "thumbnailUrl" && propertyObjectNodeName !== "url" && propertyObjectNodeName !== "image" && propertyObjectNodeName !== "provider") {
                                     countedPropertyCount++;
                                     propertyTitleList += propertyObject.nodeName + " : " + propertyObject.nodeValue + "\n";
                                 }
@@ -512,15 +576,14 @@ var visual = {
                                 connectionLink.innerText = connectionLinkText;
 
                             }
-                            connectionTD.appendChild(connectionLink);
 
                             connectionLink.title = propertyTitleList;
                             if (firstItemScopeCount === 0) {
-                                firstItemScopeTD.appendChild(firstItemScopeUL);
+                                firstItemScopeTD.appendChild(div1);
                             }
                             firstItemScopeCount++;
                             connectionTD.appendChild(connectionLink);
-                            secondItemScopeTD.appendChild(secondItemScopeUL);
+                            secondItemScopeTD.appendChild(div2);
                             box.appendChild(connectionTable);
                         }
                     }
@@ -528,9 +591,45 @@ var visual = {
                     //box.appendChild(htmlUl1);
                 }
 
-                mappingTab.appendChild(box);
+                directCrossConnectionBox.appendChild(box);
 
             });
+        },
+        relationsForItemScope: function (itemScope) {
+            var browserBox = visual.getDisplay("Browser");
+            browserBox.innerHTML = "";
+            helper.toggleTab("Browser");
+            var mainItemScopeUL = visual.createHTMLFromJSONScope(itemScope);
+            browserBox.appendChild(mainItemScopeUL);
+            var itemScopeId = itemScope.scopeId;
+
+            //render direct connection
+            visual.render.renderBox(browserBox, itemScopeId,"direct_connection");
+            //render cross connection
+            var hasCrossConnection = analyzer.directItemScopeToCrossConnectionHash.hasOwnProperty(itemScopeId);
+            if (hasCrossConnection) {
+                var crossConnectionId = analyzer.directItemScopeToCrossConnectionHash[itemScopeId];
+                var itemScopeIdList = analyzer.directCrossConnectionToItemScopeHash[crossConnectionId];
+                var listLength = itemScopeIdList.length;
+                for (var i = 0; i < listLength; i++) {
+                    visual.render.renderBox(browserBox, itemScopeIdList[i],"cross_connection");
+                }
+            }
+
+        },
+        renderBox: function (browserBox,itemScopeId,name) {
+            var box = document.createElement("div");
+            box.style.border = "1px dotted black";
+            var directRelations = analyzer.itemScopesToContainedItemScopes[itemScopeId];
+
+            for (var j = 0; j < directRelations.length; j++) {
+                var relItemScope = analyzer.jsonHash[directRelations[j]];
+                var relItemScopeUL = visual.createHTMLFromJSONScope(relItemScope);
+
+                box.appendChild(relItemScopeUL);
+            }
+            browserBox.appendChild(box);
+            return browserBox;
         }
     },
 
@@ -541,6 +640,7 @@ var visual = {
      */
 
     getDisplay: function (name) {
+        name = name + "Box";
         if (document.getElementById(name) === null) {
             var display = document.createElement("div");
 
@@ -554,142 +654,59 @@ var visual = {
             display.style.right = "0";
             display.style.zIndex = "999999";
 
-            var analysisTab = document.createElement("div");
-            analysisTab.id = "analysis";
-            analysisTab.style.width = "100%";
-            analysisTab.style.height = "779px";
-            analysisTab.style.overflowY = "auto";
-            analysisTab.style.borderTop = "1px solid black";
-            analysisTab.style.background = "white";
-            analysisTab.style.top = "20px";
-            analysisTab.style.right = "0";
-            analysisTab.style.backgroundColor = "#2daebf";
-            analysisTab.style.display = 'none';
+            var webPageButton = helper.createButton("WebPage", "#2daebf");
+            var directConnectionButton = helper.createButton("DirectConnection", "#91bd09");
+            var directCrossConnectionButton = helper.createButton("DirectCrossConnection", "#91bd09");
+            var browserButton = helper.createButton("Browser", "#ffb515");
 
-            var mappingTab = document.createElement("div");
-            mappingTab.id = "mapping";
-            mappingTab.style.width = "100%";
-            mappingTab.style.height = "779px";
-            mappingTab.style.overflowY = "auto";
-            mappingTab.style.borderTop = "1px solid black";
-            mappingTab.style.background = "white";
-            mappingTab.style.top = "20px";
-            mappingTab.style.right = "0";
-            mappingTab.style.backgroundColor = "#91bd09";
-            mappingTab.style.display = 'none';
-
-            var semanticInfo = document.createElement("div");
-            semanticInfo.id = "semanticInfo";
-            semanticInfo.style.width = "100%";
-            semanticInfo.style.height = "779px";
-            semanticInfo.style.overflowY = "auto";
-            semanticInfo.style.borderTop = "1px solid black";
-            semanticInfo.style.background = "white";
-            semanticInfo.style.top = "20px";
-            semanticInfo.style.right = "0";
-            semanticInfo.style.backgroundColor = "#ffb515";
-            semanticInfo.style.display = 'none';
+            var webPageTab = helper.createTab("WebPage", "#2daebf");
+            var directConnectionTab = helper.createTab("DirectConnection", "#91bd09");
+            var directCrossConnectionTab = helper.createTab("DirectCrossConnection", "#91bd09");
+            var browserTab = helper.createTab("Browser", "#ffb515");
 
             var b0 = document.createElement("div");
-            var b1 = document.createElement("div");
-            var b2 = document.createElement("div");
-            var b3 = document.createElement("div");
             b0.style.paddingLeft = "20px";
             b0.style.float = "left";
-            //b0.style.backgroundColor = "#2daebf";
             b0.style.height = "20px";
 
-            b1.style.paddingLeft = "20px";
-            b1.style.float = "left";
-            b1.style.backgroundColor = "#2daebf";
-            b1.style.height = "20px";
-            b1.style.display = "none";
-
-            b2.style.paddingLeft = "20px";
-            b2.style.float = "left";
-            b2.style.backgroundColor = "#91bd09";
-            b2.style.height = "18px";
-            b2.style.display = "none";
-
-            b3.style.paddingLeft = "20px";
-            b3.style.float = "left";
-            b3.style.backgroundColor = "#ffb515";
-            b3.style.height = "18px";
-            b3.style.display = "none";
-
-            if (typeof b1.textContent !== "undefined") {
-                b0.textContent = "semanticWindow";
-                b1.textContent = "analysis";
-                b2.textContent = "mapping";
-                b3.textContent = "schemaInfo";
+            if (typeof b0.textContent !== "undefined") {
+                b0.textContent = name;
             } else {
-                b0.innerText = "semanticWindow";
-                b1.innerText = "analysis";
-                b2.innerText = "mapping";
-                b3.innerText = "schemaInfo";
+                b0.innerText = name;
             }
             b0.onclick = function () {
                 var container = document.getElementById("semantic_container");
                 if (container.style.width === "150px") {
                     container.style.width = "1024px";
                     container.style.height = "800px";
-                    b1.style.display = 'block';
-                    b2.style.display = 'block';
-                    b3.style.display = 'block';
-                    analysisTab.style.display = 'block';
+                    webPageButton.style.display = 'block';
+                    directConnectionButton.style.display = 'block';
+                    directCrossConnectionButton.style.display = 'block';
+                    browserButton.style.display = 'block';
+                    webPageTab.style.display = 'block';
 
                 } else {
                     container.style.width = "150px";
                     container.style.height = "30px";
-                    b1.style.display = 'none';
-                    b2.style.display = 'none';
-                    b3.style.display = 'none';
-                    analysisTab.style.display = 'none';
-                    mappingTab.style.display = 'none';
-                    semanticInfo.style.display = 'none';
+                    webPageButton.style.display = 'none';
+                    directConnectionButton.style.display = 'none';
+                    directCrossConnectionButton.style.display = 'none';
+                    webPageTab.style.display = 'none';
+                    directConnectionTab.style.display = 'none';
+                    directCrossConnectionTab.style.display = 'none';
+                    browserButton.style.display = 'none';
 
                 }
             };
-            b1.onclick = function () {
-                var a = document.getElementById("analysis");
-                a.style.display = 'block';
-                b1.style.height = "20px";
-                var b = document.getElementById("mapping");
-                b.style.display = 'none';
-                b2.style.height = "18px";
-                var c = document.getElementById("semanticInfo");
-                c.style.display = 'none';
-                b3.style.height = "18px";
-            };
-            b2.onclick = function () {
-                var a = document.getElementById("analysis");
-                a.style.display = 'none';
-                b1.style.height = "18px";
-                var b = document.getElementById("mapping");
-                b.style.display = 'block';
-                b2.style.height = "20px";
-                var c = document.getElementById("semanticInfo");
-                c.style.display = 'none';
-                b3.style.height = "18px";
-            };
-            b3.onclick = function () {
-                var a = document.getElementById("analysis");
-                a.style.display = 'none';
-                b1.style.height = "18px";
-                var b = document.getElementById("mapping");
-                b.style.display = 'none';
-                b2.style.height = "18px";
-                var c = document.getElementById("semanticInfo");
-                c.style.display = 'block';
-                b3.style.height = "20px";
-            };
             display.appendChild(b0);
-            display.appendChild(b1);
-            display.appendChild(b2);
-            display.appendChild(b3);
-            display.appendChild(analysisTab);
-            display.appendChild(mappingTab);
-            display.appendChild(semanticInfo);
+            display.appendChild(webPageButton);
+            display.appendChild(directConnectionButton);
+            display.appendChild(directCrossConnectionButton);
+            display.appendChild(browserButton);
+            display.appendChild(webPageTab);
+            display.appendChild(directConnectionTab);
+            display.appendChild(directCrossConnectionTab);
+            display.appendChild(browserTab);
 
             var body = document.getElementsByTagName("body")[0];
             body.appendChild(display);
@@ -710,7 +727,7 @@ var storage = {
     resetLocalStorage: function () {
         localStorage.setItem("jsonHash", JSON.stringify({}));
         localStorage.setItem("itemScopeIdList", JSON.stringify([]));
-        localStorage.setItem("relationBetweenItemScopesAndTheirContainedItemScopes", JSON.stringify([]));
+        localStorage.setItem("itemScopesToContainedItemScopes", JSON.stringify({}));
         localStorage.setItem("possibleItemScopeRelationHash", JSON.stringify({}));
         localStorage.setItem("directCrossConnectionToItemScopeHash", JSON.stringify({}));
         localStorage.setItem("directItemScopeToCrossConnectionHash", JSON.stringify({}));
@@ -725,7 +742,7 @@ var storage = {
     readFromLocalStorage: function () {
         analyzer.jsonHash = JSON.parse(localStorage.getItem("jsonHash")) || {};
         analyzer.itemScopeIdList = JSON.parse(localStorage.getItem("itemScopeIdList")) || [];
-        analyzer.relationBetweenItemScopesAndTheirContainedItemScopes = JSON.parse(localStorage.getItem("relationBetweenItemScopesAndTheirContainedItemScopes")) || [];
+        analyzer.itemScopesToContainedItemScopes = JSON.parse(localStorage.getItem("itemScopesToContainedItemScopes")) || {};
         analyzer.possibleItemScopeRelationHash = JSON.parse(localStorage.getItem("possibleItemScopeRelationHash")) || {};
         analyzer.directCrossConnectionToItemScopeHash = JSON.parse(localStorage.getItem("directCrossConnectionToItemScopeHash")) || {};
         analyzer.directItemScopeToCrossConnectionHash = JSON.parse(localStorage.getItem("directItemScopeToCrossConnectionHash")) || {};
@@ -739,7 +756,7 @@ var storage = {
         //create json object from local storage
         localStorage.setItem("jsonHash", JSON.stringify(analyzer.jsonHash));
         localStorage.setItem("itemScopeIdList", JSON.stringify(analyzer.itemScopeIdList));
-        localStorage.setItem("relationBetweenItemScopesAndTheirContainedItemScopes", JSON.stringify(analyzer.relationBetweenItemScopesAndTheirContainedItemScopes));
+        localStorage.setItem("itemScopesToContainedItemScopes", JSON.stringify(analyzer.itemScopesToContainedItemScopes));
         localStorage.setItem("possibleItemScopeRelationHash", JSON.stringify(analyzer.possibleItemScopeRelationHash));
         localStorage.setItem("directCrossConnectionToItemScopeHash", JSON.stringify(analyzer.directCrossConnectionToItemScopeHash));
         localStorage.setItem("directItemScopeToCrossConnectionHash", JSON.stringify(analyzer.directItemScopeToCrossConnectionHash));
@@ -768,7 +785,7 @@ var run = {
         console.log("------------");
         console.log("END analysis");
     },
-    mapping: function(){
+    mapping: function () {
         console.log("START mapping");
         console.log("-------------");
         console.time('mapping');
@@ -779,24 +796,24 @@ var run = {
         console.log("END mapping");
 
     },
-    rendering : function(){
+    rendering: function () {
         console.log("START rendering");
         console.log("---------------");
         console.time('rendering');
-        console.time('analyzedItemsFromItemList');
-        visual.render.analyzedItemsFromItemList();
-        console.timeEnd('analyzedItemsFromItemList');
-        console.time('mappedPossibleConnections');
-        visual.render.mappedPossibleConnections();
-        console.timeEnd('mappedPossibleConnections');
-        console.time('semanticMapping');
-        visual.render.semanticMapping();
-        console.timeEnd('semanticMapping');
+        console.time('currentWebPageItems');
+        visual.render.currentWebPageItems();
+        console.timeEnd('currentWebPageItems');
+        console.time('directConnections');
+        //visual.render.directConnections();
+        console.timeEnd('directConnections');
+        console.time('directCrossConnection');
+        visual.render.directCrossConnection();
+        console.timeEnd('directCrossConnection');
         console.timeEnd('rendering');
         console.log("-------------");
         console.log("END rendering");
     },
-    localStorageToJavaScript: function(){
+    localStorageToJavaScript: function () {
         console.log("START : read from LocalStorage store in JS");
         console.time('localStorageToJavaScript');
         storage.readFromLocalStorage();
@@ -818,11 +835,11 @@ var run = {
         console.log("END : delete LocalStorage");
     }
 
-    
+
 };
 var helper = {
-    toLowerCaseTrimmedSpaces:function(string){
-        return string.toLowerCase().replace(/\s+/g,' ').replace(/^\s+|\s+$/,'')
+    toLowerCaseTrimmedSpaces: function (string) {
+        return string.toLowerCase().replace(/\s+/g, ' ').replace(/^\s+|\s+$/, '')
     },
     objectDoesNotExist: function (currentItem) {
 
@@ -867,11 +884,12 @@ var helper = {
                                                 //compare name properties for final comparison
                                                 var duplicatePropertyCount = 0;
                                                 for (var j = 0; j < cLength; j++) {
-                                                    if (currentChildren[j]['nodeName'] === "thumbnailUrl" || currentChildren[j]['nodeName'] === "url" || currentChildren[j]['nodeName'] === "image") {
+                                                    var currentChildNodeName = currentChildren[j]['nodeName'];
+                                                    if (currentChildNodeName === "thumbnailUrl" || currentChildNodeName === "url" || currentChildNodeName === "image" || currentChildNodeName === "provider") {
                                                         duplicatePropertyCount += 1;
                                                     } else {
                                                         for (var k = 0; k < sLength; k++) {
-                                                            if (currentChildren[j]['nodeName'] === storageChildren[k]['nodeName']) {
+                                                            if (currentChildNodeName === storageChildren[k]['nodeName']) {
                                                                 var cleanCurrentItemChildNodeValue = helper.toLowerCaseTrimmedSpaces(currentChildren[j]['nodeValue']);
                                                                 var cleanStorageItemChildNodeValue = helper.toLowerCaseTrimmedSpaces(storageChildren[k]['nodeValue']);
                                                                 if (cleanCurrentItemChildNodeValue === cleanStorageItemChildNodeValue) {
@@ -918,7 +936,66 @@ var helper = {
         return unsortedList.sort(function (a, b) {
             return a - b
         });
-    }
+    },
+    sortByLengthDesc: function (unsortedList) {
+        return unsortedList.sort(function (a, b) {
+            if (a.length > b.length)
+                return -1;
+            if (a.length < b.length)
+                return 1;
+            return 0;
+        });
+    },
+    createTab: function (name, color) {
+        var tab = document.createElement("div");
+        tab.id = name + "Tab";
+        tab.className = "SemanticTab";
+        tab.style.width = "100%";
+        tab.style.height = "779px";
+        tab.style.overflowY = "auto";
+        tab.style.borderTop = "1px solid black";
+        tab.style.background = "white";
+        tab.style.top = "20px";
+        tab.style.right = "0";
+        tab.style.backgroundColor = color;
+        tab.style.display = 'none';
+        var box = document.createElement("div");
+        box.style.width = "100%";
+        box.style.height = "100%";
+        box.id = name + "Box";
+        tab.appendChild(box);
+        return tab;
+    },
+    createButton: function (name, color) {
+        var button = document.createElement("div");
+        button.style.padding = "1px 10px";
+        button.id = name + "Button";
+        button.style.float = "left";
+        button.style.backgroundColor = color;
+        button.style.height = "20px";
+        button.style.display = "none";
 
+        if (typeof button.textContent !== "undefined") {
+            button.textContent = name;
+        } else {
+            button.innerText = name;
+        }
+
+        button.onclick = function () {
+            helper.toggleTab(name);
+        };
+        return button;
+    },
+    toggleTab: function (name) {
+        var tabs = document.getElementsByClassName("SemanticTab");
+        for (var i = 0; i < tabs.length; i++) {
+            var tab = tabs[i];
+            if (tab.id == name + "Tab") {
+                tab.style.display = 'block';
+            } else {
+                tab.style.display = 'none';
+            }
+        }
+    }
 };
 run.run();
