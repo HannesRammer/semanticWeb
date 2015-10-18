@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name         Semantic annotations
+// @name         Semantic annotation aggregation Browser
 // @namespace    http://your.homepage/
 // @version      1.0
-// @description  Semantic analyzer
+// @description  Scan webpages for semantic structure as provided by Schema.org, interconnect found semantic information, and make them available through browser
 // @author       Hannes Rammer
-// @match        https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo?hl=de
+// @match
 // @grant        none
 // ==/UserScript==
 var analyzer = {
@@ -329,6 +329,9 @@ var visual = {
         var liType = document.createElement("li");
         var liName = document.createElement("li");
         var liValue = document.createElement("li");
+        ul.style.margin = "0";
+        ul.style.padding = "5px 15px";
+
         liType.style.display = "none";
         liType.className = "liType";
         liName.className = "liName";
@@ -386,7 +389,12 @@ var visual = {
         for (var i = 0; i < properties.length; i++) {
             var property = properties[i];
             if (property.nodeName === "name" && newScope) {
-                browserLink.innerText += property.nodeValue;
+                if (typeof browserLink.textContent !== "undefined") {
+                    browserLink.textContent += property.nodeValue;
+                } else {
+                    browserLink.innerText += property.nodeValue;
+                }
+
                 newScope = false;
             }
 
@@ -543,8 +551,8 @@ var visual = {
                             var div2 = document.createElement("div");
                             div1.style.overflow = "auto";
                             div2.style.overflow = "auto";
-                            div1.style.width = "400px";
-                            div2.style.width = "400px";
+                            div1.style.width = "300px";
+                            div2.style.width = "300px";
                             div1.style.maxHeight = "200px";
                             div2.style.maxHeight = "200px";
 
@@ -621,13 +629,23 @@ var visual = {
         renderBox: function (browserBox, itemScopeId, name, listManager) {
             var box = document.createElement("div");
             box.style.border = "1px dotted black";
+            var box1 = document.createElement("div");
+            box1.style.border = "1px solid black";
             var directRelations = analyzer.itemScopesToContainedItemScopes[itemScopeId];
-            if(directRelations !== undefined){
+            if (directRelations !== undefined) {
                 var itemScope = analyzer.jsonHash[itemScopeId];
-                browserBox.appendChild(visual.createHTMLFromJSONScope(itemScope));
-                box.innerText = name;
+                //browserBox.appendChild(visual.createHTMLFromJSONScope(itemScope));
+                if (typeof box.textContent !== "undefined") {
+                    box.textContent = name;//+ " via :";
+                } else {
+                    box.innerText = name;//+ " via :";
+                }
+
+                box1.appendChild(visual.createHTMLFromJSONScope(itemScope));
+                box1.appendChild(box);
+                //
                 for (var j = 0; j < directRelations.length; j++) {
-                    if(j==0){
+                    if (j == 0) {
                         relItemScope
                     }
                     var relItemScope = analyzer.jsonHash[directRelations[j]];
@@ -639,10 +657,21 @@ var visual = {
                         }
                     }
                 }
-                if(box.innerText!=="cross_connection"){
 
-                    browserBox.appendChild(box);
+                if (typeof box.textContent !== "undefined") {
+                    if (box.textContent !== "cross_connection") {
+
+                        browserBox.appendChild(box1);
+                    }
+
+                } else {
+                    if (box.innerText !== "cross_connection") {
+
+                        browserBox.appendChild(box1);
+                    }
+
                 }
+
             }
 
         }
@@ -668,6 +697,9 @@ var visual = {
             display.style.top = "0";
             display.style.right = "0";
             display.style.zIndex = "999999";
+            display.style.fontSize = "13px !important";
+            display.style.fontFamily = "sans-serif";
+            display.style.fontWeight = "bold";
 
             var webPageButton = helper.createButton("WebPage", "#2daebf");
             var directConnectionButton = helper.createButton("DirectConnection", "#91bd09");
@@ -692,10 +724,10 @@ var visual = {
             b0.onclick = function () {
                 var container = document.getElementById("semantic_container");
                 if (container.style.width === "150px") {
-                    container.style.width = "1024px";
+                    container.style.width = "800px";
                     container.style.height = "800px";
                     webPageButton.style.display = 'block';
-                    directConnectionButton.style.display = 'block';
+                    directConnectionButton.style.display = 'none';
                     directCrossConnectionButton.style.display = 'block';
                     browserButton.style.display = 'block';
                     webPageTab.style.display = 'block';
