@@ -1294,7 +1294,8 @@ var automatize = {
     }
 };
 //automatize,analyze,map,render
-//run.run(true, true, true, true);//automatic IMDB
-run.run(false, true, false, false);//analyze
+//run.run(true, true, false, false);//automatic IMDB
+//run.run(false, true, false, false);//analyze
 //run.run(false, false, true, false);//map
 //run.run(false, false, false, true);//render
+run.run(false, true, true, true);//all
