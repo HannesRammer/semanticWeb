@@ -29,7 +29,6 @@ var analyzer = {
          * create a json list from all found root scope items
          * @effect adds json scope item to analyzer.JSONRootItemScopeList
          */
-
         JSONRootItemScopesFromWebpage: function (scopeList) {
             //var HTMLRootItemScopes = analyzer.extract.helper.HTMLRootItemScopesFromWebpage();
             var HTMLRootItemScopes = scopeList;//analyzer.extract.helper.HTMLRootItemScopesFromWebpage();
@@ -63,7 +62,6 @@ var analyzer = {
         }
     },
 
-
     /**
      * compares single scope items with all scope Items in List to find possible connections
      * only comparing items from different http sources
@@ -86,8 +84,7 @@ var analyzer = {
 
                     var isPlural = helper.isPlural(cNodeName, sNodeName);
                     var createConnection = (emptyName || sameName);//&& isPlural;
-
-//do not create relations for plurals eg connecting all actors of an actor list to the list and therefore to each other
+                    //do not create relations for plurals eg connecting all actors of an actor list to the list and therefore to each other
 
                     if (createConnection) {
                         //when same value -> check fore more similarities
@@ -120,8 +117,6 @@ var analyzer = {
                                 if (cleanCurrentString !== "" && cleanCurrentString === cleanStorageString) {
                                     //Sort numbers in an array in ascending order
                                     var sortedScopeConnectionIds = helper.sortAscending([currentItem.scopeId, storageItem.scopeId]);
-
-                                    //TODO
                                     var propertyConnectionIds = [];
                                     if (sortedScopeConnectionIds[0] === currentItem.scopeId) {
                                         propertyConnectionIds = [currentItemChild['propertyId'], storageItemChild['propertyId']];
@@ -130,13 +125,6 @@ var analyzer = {
                                     }
                                     var joinedScopeConnectionId = sortedScopeConnectionIds.join('-');
                                     var joinedPropertyConnectionId = propertyConnectionIds.join('-');
-
-                                    //add to list if not already exists
-                                    //first if should not happen due tu differend source
-                                    //  if (analyzer.relationBetweenItemScopesAndTheirContainedItemScopes.indexOf(joinedScopeConnectionId) < 0 && analyzer.possibleItemScopeRelationList.indexOf(joinedScopeConnectionId) < 0) {
-                                    //                              analyzer.possibleItemScopeRelationList.push(joinedScopeConnectionId);
-                                    //                        }
-                                    //NEW
                                     var currentCrossId = -1;
                                     var newCrossId = Object.keys(analyzer.directItemScopeToCrossConnectionHash).length;
                                     var hasCurrentItemScopeId = analyzer.directItemScopeToCrossConnectionHash.hasOwnProperty(currentItem.scopeId);
@@ -149,13 +137,11 @@ var analyzer = {
                                             currentCrossId = analyzer.directItemScopeToCrossConnectionHash[storageItem.scopeId];
                                         }
                                     }
-
                                     if (currentCrossId === -1) {
                                         currentCrossId = newCrossId;
                                     }
                                     analyzer.directItemScopeToCrossConnectionHash[currentItem.scopeId] = currentCrossId;
                                     analyzer.directItemScopeToCrossConnectionHash[storageItem.scopeId] = currentCrossId;
-
                                     var hasCurrentCrossConnectionId = analyzer.directCrossConnectionToItemScopeHash.hasOwnProperty(currentCrossId.toString());
                                     var itemScopeIds = analyzer.directCrossConnectionToItemScopeHash[currentCrossId];
                                     if (hasCurrentCrossConnectionId) {
@@ -165,12 +151,10 @@ var analyzer = {
                                         if (itemScopeIds.indexOf(storageItem.scopeId) < 0) {
                                             itemScopeIds.push(storageItem.scopeId);
                                         }
-
                                     } else {
                                         itemScopeIds = [currentItem.scopeId, storageItem.scopeId];
                                     }
                                     analyzer.directCrossConnectionToItemScopeHash[currentCrossId] = helper.sortAscending(itemScopeIds);
-
                                     if (analyzer.possibleItemScopeRelationHash.hasOwnProperty(joinedScopeConnectionId)) {
                                         var possiblePropertyRelationList = analyzer.possibleItemScopeRelationHash[joinedScopeConnectionId];
                                         if (possiblePropertyRelationList.indexOf(joinedPropertyConnectionId) < 0) {
@@ -179,9 +163,7 @@ var analyzer = {
                                     } else {
                                         analyzer.possibleItemScopeRelationHash[joinedScopeConnectionId] = [joinedPropertyConnectionId];
                                     }
-
                                     ////////With Threshold
-                                    //
                                     var percents = helper.percents(currentItem, storageItem);
                                     if (percents[0] >= analyzer.percent || percents[1] >= analyzer.percent) {
                                         var currentCrossIdWithT = -1;
@@ -196,13 +178,11 @@ var analyzer = {
                                                 currentCrossIdWithT = analyzer.directItemScopeToCrossConnectionHashWithT[storageItem.scopeId];
                                             }
                                         }
-
                                         if (currentCrossIdWithT === -1) {
                                             currentCrossIdWithT = newCrossIdWithT;
                                         }
                                         analyzer.directItemScopeToCrossConnectionHashWithT[currentItem.scopeId] = currentCrossIdWithT;
                                         analyzer.directItemScopeToCrossConnectionHashWithT[storageItem.scopeId] = currentCrossIdWithT;
-
                                         var hasCurrentCrossConnectionIdWithT = analyzer.directCrossConnectionToItemScopeHashWithT.hasOwnProperty(currentCrossIdWithT.toString());
                                         var itemScopeIdsWithT = analyzer.directCrossConnectionToItemScopeHashWithT[currentCrossIdWithT];
                                         if (hasCurrentCrossConnectionIdWithT) {
@@ -212,12 +192,10 @@ var analyzer = {
                                             if (itemScopeIdsWithT.indexOf(storageItem.scopeId) < 0) {
                                                 itemScopeIdsWithT.push(storageItem.scopeId);
                                             }
-
                                         } else {
                                             itemScopeIdsWithT = [currentItem.scopeId, storageItem.scopeId];
                                         }
                                         analyzer.directCrossConnectionToItemScopeHashWithT[currentCrossIdWithT] = helper.sortAscending(itemScopeIdsWithT);
-
                                         if (analyzer.possibleItemScopeRelationHashWithT.hasOwnProperty(joinedScopeConnectionId)) {
                                             var possiblePropertyRelationListWithT = analyzer.possibleItemScopeRelationHashWithT[joinedScopeConnectionId];
                                             if (possiblePropertyRelationListWithT.indexOf(joinedPropertyConnectionId) < 0) {
@@ -227,10 +205,6 @@ var analyzer = {
                                             analyzer.possibleItemScopeRelationHashWithT[joinedScopeConnectionId] = [joinedPropertyConnectionId];
                                         }
                                     }
-
-
-                                } else {
-
                                 }
                             }
                         }
@@ -244,30 +218,23 @@ var analyzer = {
         var currentItemCount = 0;
         Object.keys(analyzer.jsonHash).forEach(function (currentItemKey) {
             var currentItem = analyzer.jsonHash[currentItemKey];
-
             analyzer.createPossibleConnectionsBetweenScopeItemAndList(currentItem);
-            //when same source -> check fore more similarities
             currentItemCount += 1;
         });
     },
 
     transformHTMLItemScopeToJSON: function (itemScope, scopeId) {
-
         var jsonScope = analyzer.newJSONTreeNode();
-
         if (analyzer.itemScopeIdList.indexOf(scopeId) > -1) {
             console.log("duplicate Scope Id -> something went wrong");
         }
         jsonScope.scopeId = scopeId;
-
         jsonScope.nodeSource = helper.cleanUrl(document.location.toString());
         jsonScope.nodeType = itemScope.getAttribute("itemtype");
         if (itemScope.getAttribute("itemprop") !== null) {
             jsonScope.nodeName = itemScope.getAttribute("itemprop");
         }
-        //var HTMLItemScopeProperties = itemScope.querySelectorAll('[itemprop]');
         var HTMLItemScopeProperties = analyzer.getItemScopeProperties(itemScope);
-
         for (var i = 0; i < HTMLItemScopeProperties.length; i++) {
             var HTMLItemScopeProperty = HTMLItemScopeProperties[i];
             var spcecialid = HTMLItemScopeProperty.getAttribute("specialid");
@@ -313,9 +280,6 @@ var analyzer = {
             }
         }
         if (helper.objectDoesNotExist(jsonScope)) {
-
-
-
             var scopeId = jsonScope.scopeId;
             if (analyzer.jsonHash.hasOwnProperty(scopeId)) {
             } else {
@@ -331,7 +295,6 @@ var analyzer = {
                     if (analyzer.itemScopeIdList.indexOf(propertyScopeId) == -1) {
                         analyzer.itemScopeIdList.push(propertyScopeId);
                     }
-
                     if (analyzer.itemScopesToContainedItemScopes.hasOwnProperty(scopeId)) {
                         var relationList = analyzer.itemScopesToContainedItemScopes[scopeId];
                         if (relationList.indexOf(propertyScopeId) < 0) {
@@ -348,13 +311,10 @@ var analyzer = {
                     } else {
                         analyzer.itemScopesToContainedItemScopes[propertyScopeId] = [scopeId];
                     }
-
                     if (analyzer.jsonHash.hasOwnProperty(propertyScopeId)) {
 
                     } else {
                         analyzer.jsonHash[propertyScopeId] = jsonScopeProperty;
-
-
                     }
                 }
             }
@@ -405,7 +365,6 @@ var visual = {
         var liValue = document.createElement("li");
         ul.style.margin = "0";
         ul.style.padding = "5px 15px";
-
         liType.style.display = "none";
         liType.className = "liType";
         liName.className = "liName";
@@ -429,7 +388,6 @@ var visual = {
         htmlContent.title = JSON.stringify(jsonScope);
         htmlContent.style.color = "#a9014b";
         htmlContent.style.fontWeight = "bold";
-
         if (typeof liType.textContent !== "undefined") {
             htmlContent.textContent = nodeName;
             browserLink.textContent = "->";
@@ -443,8 +401,6 @@ var visual = {
         }
         liName.appendChild(htmlContent);
         liName.appendChild(browserLink);
-
-
         htmlContent.onclick = function () {
             visual.toggleItemScopeView(liType);
         };
@@ -458,17 +414,12 @@ var visual = {
             console.timeEnd('browser');
 
         };
-
-
-        //liType.appendChild(liChildren);
         var properties = jsonScope.children;
         var newScope = true;
-
         for (var i = 0; i < properties.length; i++) {
             var property = properties[i];
             if (property.nodeName === "name" && newScope) {
                 if (nodeName.indexOf("actors") === -1) {
-
                     if (typeof browserLink.textContent !== "undefined") {
                         browserLink.textContent += property.nodeValue;
                     } else {
@@ -477,7 +428,6 @@ var visual = {
                 }
                 newScope = false;
             }
-
             //if property is new scope
             if (property.nodeType !== "") {
                 var htmlPropertyScope = visual.createHTMLFromJSONScope(property);
@@ -519,7 +469,6 @@ var visual = {
                 liType.appendChild(ulPropName);
             }
         }
-        //console.log(ul);
         return ul;
     },
 
@@ -528,7 +477,6 @@ var visual = {
      * @param li
      */
     toggleItemScopeView: function (li) {
-        //var target = event.target;
         if (li.className === "liType") {
             if (li.style.display === "none") {
                 li.style.display = "block";
@@ -554,7 +502,6 @@ var visual = {
                 var possiblePropertyRelationList = analyzer.possibleItemScopeRelationHash[possibleJoinedScopeRelationId];
                 var possiblePropertyRelationListLength = possiblePropertyRelationList.length;
                 for (var i = 0; i < possiblePropertyRelationListLength; i++) {
-
                     var possiblePropertyRelationIds = possiblePropertyRelationList[i].split('-');
                     var itemScopePropertyConnectionReason = document.createElement("div");
                     var JSONItemScope1 = analyzer.jsonHash[possibleJoinedScopeRelationIds[0]];
@@ -569,7 +516,6 @@ var visual = {
                             } else {
                                 itemScopePropertyConnectionReason.innerText = property.nodeName + " : " + property.nodeValue;
                             }
-
                         }
                     }
                     var box = document.createElement("div");
@@ -577,33 +523,26 @@ var visual = {
                     box.style.maxHeight = "450px";
                     box.style.width = "100%";
                     box.style.overflow = "auto";
-
-
                     var htmlUl1 = visual.createHTMLFromJSONScope(JSONItemScope1);
                     var htmlUl2 = visual.createHTMLFromJSONScope(JSONItemScope2);
                     box.appendChild(itemScopePropertyConnectionReason);
                     box.appendChild(htmlUl1);
                     box.appendChild(htmlUl2);
                     directConnectionBox.appendChild(box);
-
                 }
             });
         },
         directCrossConnection: function () {
             var directCrossConnectionBox = visual.getDisplay("DirectCrossConnection");
-
             Object.keys(analyzer.directCrossConnectionToItemScopeHash).forEach(function (directCrossConnectionId) {
                 var box = document.createElement("div");
                 box.style.border = "1px solid black";
                 box.style.maxHeight = "450px";
                 box.style.width = "100%";
                 box.style.overflow = "auto";
-
-
                 var itemScopeIds = analyzer.directCrossConnectionToItemScopeHash[directCrossConnectionId];
                 var itemScopeIdsDublicate = JSON.parse(JSON.stringify(itemScopeIds));
                 for (var i = 0; i < itemScopeIdsDublicate.length; itemScopeIdsDublicate.splice(0, 1)) {
-
                     var firstItemScopeId = itemScopeIdsDublicate[i];
                     var firstItemScopeCount = 0;
                     for (var j = i + 1; j < itemScopeIdsDublicate.length; j++) {
@@ -627,7 +566,6 @@ var visual = {
                             connectionTR.appendChild(firstItemScopeTD);
                             connectionTR.appendChild(connectionTD);
                             connectionTR.appendChild(secondItemScopeTD);
-
                             var div1 = document.createElement("div");
                             var div2 = document.createElement("div");
                             div1.style.overflow = "auto";
@@ -636,12 +574,10 @@ var visual = {
                             //div2.style.width = "400px";
                             div1.style.maxHeight = "200px";
                             div2.style.maxHeight = "200px";
-
                             var firstItem = analyzer.jsonHash[firstItemScopeId];
                             var secondItem = analyzer.jsonHash[secondItemScopeId];
                             var firstItemScopeUL = visual.createHTMLFromJSONScope(firstItem);
                             var secondItemScopeUL = visual.createHTMLFromJSONScope(secondItem);
-
                             div1.appendChild(firstItemScopeUL);
                             div2.appendChild(secondItemScopeUL);
                             var propertyTitleList = "";
@@ -656,25 +592,15 @@ var visual = {
                                     propertyTitleList += propertyObject.nodeName + " : " + propertyObject.nodeValue + "\n";
                                 }
                             }
-
                             var perc1 = ((100 / firstItem.children.length ) * countedPropertyCount).toFixed(2);
                             var perc2 = ((100 / secondItem.children.length ) * countedPropertyCount).toFixed(2);
-
                             var connectionLink = document.createElement("a");
                             var connectionLinkText = "<b>" + perc1 + "%</b> " + countedPropertyCount + "connection";
-
                             if (propertyConnections.length !== 1) {
                                 connectionLinkText += "s";
                             }
                             connectionLinkText += " <b>" + perc2 + "%</b>";
-                            /**if (typeof connectionLink.textContent !== "undefined") {
-                                    connectionLink.textContent = connectionLinkText;
-                                } else {
-                                    connectionLink.innerText = connectionLinkText;
-                                }
-                             */
                             connectionLink.innerHTML = connectionLinkText;
-
                             connectionLink.title = propertyTitleList;
                             if (firstItemScopeCount === 0) {
                                 firstItemScopeTD.appendChild(div1);
@@ -689,16 +615,12 @@ var visual = {
                 directCrossConnectionBox.appendChild(box);
             });
         },
-
         relationsForItemScope: function (itemScope) {
             var browserBox = visual.getDisplay("Browser");
             var listManager = [];
             browserBox.innerHTML = "";
             helper.toggleTab("Browser");
-            //var mainItemScopeUL = visual.createHTMLFromJSONScope(itemScope);
-            //browserBox.appendChild(mainItemScopeUL);
             var itemScopeId = itemScope.scopeId;
-
             //render direct connection
             visual.render.renderBox(browserBox, itemScopeId, "direct_connection", 100, listManager);
             //render cross connection
@@ -714,7 +636,6 @@ var visual = {
                     }
                 }
             }
-
         },
         renderBox: function (browserBox, itemScopeId, name, percent, listManager) {
             var innerBox = document.createElement("div");
@@ -728,13 +649,10 @@ var visual = {
             } else {
                 innerBox.innerText = name + " " + percent + "%";//+ " via :";
             }
-
             outerBox.appendChild(visual.createHTMLFromJSONScope(itemScope));
             outerBox.appendChild(innerBox);
-            //
             var directRelations = analyzer.itemScopesToContainedItemScopes[itemScopeId];
             if (directRelations !== undefined) {
-
                 for (var j = 0; j < directRelations.length; j++) {
                     var relItemScope = analyzer.jsonHash[directRelations[j]];
                     if (relItemScope !== undefined) {
@@ -746,22 +664,15 @@ var visual = {
                     }
                 }
             }
-
             if (typeof innerBox.textContent !== "undefined") {
                 if (innerBox.textContent !== "cross_connection " + percent + "%") {
-
                     browserBox.appendChild(outerBox);
                 }
-
             } else {
                 if (innerBox.innerText !== "cross_connection " + percent + "%") {
-
                     browserBox.appendChild(outerBox);
                 }
-
             }
-
-
         }
     },
 
@@ -770,12 +681,10 @@ var visual = {
      * @param nameVar : id of display tab div as string
      * @returns {HTMLElement}
      */
-
     getDisplay: function (nameVar) {
         var name = nameVar + "Box";
         if (document.getElementById(name) === null) {
             var display = document.createElement("div");
-
             display.id = "semantic_container";
             display.style.width = "150px";
             display.style.height = "30px";
@@ -793,17 +702,14 @@ var visual = {
             var directConnectionButton = helper.createButton("DirectConnection", "#91bd09");
             var directCrossConnectionButton = helper.createButton("DirectCrossConnection", "#91bd09");
             var browserButton = helper.createButton("Browser", "#ffb515");
-
             var webPageTab = helper.createTab("WebPage", "#2daebf");
             var directConnectionTab = helper.createTab("DirectConnection", "#91bd09");
             var directCrossConnectionTab = helper.createTab("DirectCrossConnection", "#91bd09");
             var browserTab = helper.createTab("Browser", "#ffb515");
-
             var b0 = document.createElement("div");
             b0.style.paddingLeft = "20px";
             b0.style.float = "left";
             b0.style.height = "20px";
-
             if (typeof b0.textContent !== "undefined") {
                 b0.textContent = name;
             } else {
@@ -819,7 +725,6 @@ var visual = {
                     directCrossConnectionButton.style.display = 'block';
                     browserButton.style.display = 'block';
                     webPageTab.style.display = 'block';
-
                 } else {
                     container.style.width = "150px";
                     container.style.height = "30px";
@@ -830,7 +735,6 @@ var visual = {
                     directConnectionTab.style.display = 'none';
                     directCrossConnectionTab.style.display = 'none';
                     browserButton.style.display = 'none';
-
                 }
             };
             display.appendChild(b0);
@@ -842,20 +746,15 @@ var visual = {
             display.appendChild(directConnectionTab);
             display.appendChild(directCrossConnectionTab);
             display.appendChild(browserTab);
-
             var body = document.getElementsByTagName("body")[0];
             body.appendChild(display);
             return document.getElementById(name);
         } else {
             return document.getElementById(name);
         }
-
     }
-
 };
-
 var storage = {
-
     /**
      * deletes all entries by resetting the local storage
      */
@@ -871,10 +770,8 @@ var storage = {
         localStorage.setItem("directItemScopeToCrossConnectionHashWithT", JSON.stringify({}));
 
     },
-
     /**
      * load the local storage into the JavaScript environment as JSON objects
-     *
      * eg: done before every web page is loaded
      */
     readFromLocalStorage: function () {
@@ -887,10 +784,7 @@ var storage = {
         analyzer.directItemScopeToCrossConnectionHash = JSON.parse(localStorage.getItem("directItemScopeToCrossConnectionHash")) || {};
         analyzer.directCrossConnectionToItemScopeHashWithT = JSON.parse(localStorage.getItem("directCrossConnectionToItemScopeHashWithT")) || {};
         analyzer.directItemScopeToCrossConnectionHashWithT = JSON.parse(localStorage.getItem("directItemScopeToCrossConnectionHashWithT")) || {};
-
-
     },
-
     /**
      * stores the JSON objects into the local storage system
      */
@@ -907,7 +801,6 @@ var storage = {
         localStorage.setItem("directItemScopeToCrossConnectionHashWithT", JSON.stringify(analyzer.directItemScopeToCrossConnectionHashWithT));
     }
 };
-
 var helper = {
     isPlural: function (cName, sName) {
         var isPlural = false;
@@ -924,18 +817,11 @@ var helper = {
         for (var i = 0; i < firstItem.children.length; i++) {
             var propertyObject1 = firstItem.children[i];
             var propertyObjectNodeName1 = propertyObject1['nodeName'];
-
             for (var j = 0; j < secondItem.children.length; j++) {
                 var propertyObject2 = secondItem.children[j];
                 var propertyObjectNodeName2 = propertyObject2['nodeName'];
-                //if (propertyObjectNodeName1 !== "thumbnailUrl" && propertyObjectNodeName1 !== "image" && propertyObjectNodeName1 !== "provider") {
-                //    countedPropertyCount++;
-                //    break;
-                //} else {
                 if (propertyObjectNodeName1 !== "thumbnailUrl" && propertyObjectNodeName1 !== "url" && propertyObjectNodeName1 !== "image" && propertyObjectNodeName1 !== "provider") {
-                    //if (propertyObjectNodeName1 !== "thumbnailUrl" && propertyObjectNodeName1 !== "image" && propertyObjectNodeName1 !== "provider") {
                     if (propertyObjectNodeName2 !== "thumbnailUrl" && propertyObjectNodeName2 !== "image" && propertyObjectNodeName2 !== "provider") {
-
                         if (propertyObjectNodeName1 === propertyObjectNodeName2) {
                             if (propertyObject1['nodeValue'] === propertyObject2['nodeValue']) {
                                 countedPropertyCount++;
@@ -944,13 +830,10 @@ var helper = {
                         }
                     }
                 }
-
             }
         }
-        //
         var perc1 = ((100 / firstItem.children.length ) * countedPropertyCount).toFixed(2);
         var perc2 = ((100 / secondItem.children.length ) * countedPropertyCount).toFixed(2);
-
         return [perc1, perc2];
     },
     toLowerCaseTrimmedSpaces: function (string) {
@@ -966,35 +849,18 @@ var helper = {
             }
         }
         if (string.indexOf("//www.imdb.com/") > -1) {
-            //remove unnesecarry reference from link to improve mapping of person instances
+            //remove unnecessary reference from link to improve mapping of person instances
             var splitUrl = string.split("?");
-
-            //  if (splitUrl[1] !== undefined) {
-            //         var splitParams = splitUrl[1].split("&");
-            //         for (var i = 0; i < splitParams.length; i++) {
-            //             if (splitParams[i].indexOf("ref_=") > -1) {
-            //                 splitParams.splice(i, 1);
-            //             }
-            //       }
-            ////         if (splitParams.length === 0) {
-            //             string = splitUrl[0];
-            //         } else {
-            //             string = splitUrl[0] + "?" + splitParams.join("&");
-            //       }
-            //   }
-
             string = splitUrl[0];
         }
         return string;
     },
     objectDoesNotExist: function (currentItem) {
         var doesNotExists = true;
-        //Object.keys(analyzer.jsonHash).some(function (currentItemKey) {
         var currentItemKeys = Object.keys(analyzer.jsonHash);
         for (var x = 0; x < currentItemKeys.length; x++) {
             var currentItemKey = currentItemKeys[x];
             var storageItem = analyzer.jsonHash[currentItemKey];
-            //var currentItem = currentList[i];
             //when same source -> check fore more similarities
             if (currentItem !== undefined && storageItem !== undefined) {
                 if (currentItem['nodeSource'] === storageItem['nodeSource']) {
@@ -1012,16 +878,13 @@ var helper = {
                                 if ((currentChildren !== undefined) && ( storageChildren !== undefined)) {
                                     var cLength = currentChildren.length;
                                     var sLength = storageChildren.length;
-
                                     if (cLength > 0 && sLength > 0) {
                                         if (cLength === sLength) {
-
                                             if (cLength === 1) {//nodeName === url and no name propertie exists
                                                 if (currentChildren[0]['nodeType'] === storageChildren[0]['nodeType']) {
                                                     if (currentChildren[0]['nodeName'] === storageChildren[0]['nodeName']) {
                                                         var cleanCurrentItemChildNodeValue = helper.toLowerCaseTrimmedSpaces(currentChildren[0]['nodeValue']);
                                                         var cleanStorageItemChildNodeValue = helper.toLowerCaseTrimmedSpaces(storageChildren[0]['nodeValue']);
-
                                                         if (cleanCurrentItemChildNodeValue === cleanStorageItemChildNodeValue) {
                                                             doesNotExists = false;
                                                             return doesNotExists;
@@ -1033,7 +896,6 @@ var helper = {
                                                 var duplicatePropertyCount = 0;
                                                 for (var j = 0; j < cLength; j++) {
                                                     var currentChildNodeName = currentChildren[j]['nodeName'];
-                                                    //if (currentChildNodeName === "thumbnailUrl" || currentChildNodeName === "url" || currentChildNodeName === "image" || currentChildNodeName === "provider") {
                                                     if (currentChildNodeName === "thumbnailUrl" || currentChildNodeName === "image" || currentChildNodeName === "provider") {
                                                         duplicatePropertyCount += 1;
                                                     } else {
@@ -1065,17 +927,9 @@ var helper = {
                                     doesNotExists = false;
                                     return doesNotExists;
                                 }
-                            } else {
-
                             }
-                        } else {
-
                         }
-                    } else {
-
                     }
-                } else {
-
                 }
             }
         }
@@ -1123,13 +977,11 @@ var helper = {
         button.style.backgroundColor = color;
         button.style.height = "20px";
         button.style.display = "none";
-
         if (typeof button.textContent !== "undefined") {
             button.textContent = name;
         } else {
             button.innerText = name;
         }
-
         button.onclick = function () {
             helper.toggleTab(name);
         };
@@ -1147,11 +999,9 @@ var helper = {
         }
     }
 };
-
 var run = {
     run: function (auto, analyze, map, render) {
         console.time('run');
-
         if (analyze) {
             run.localStorageToJavaScript();
             run.analysis();
@@ -1166,8 +1016,6 @@ var run = {
             run.localStorageToJavaScript();
             run.rendering();
         }
-
-
         if (auto) {
             automatize.extractMovieFromIMDB();
         }
@@ -1195,7 +1043,6 @@ var run = {
         var mapRunEnd = new Date().getTime().toString();
         analyzer.timesTaken += "map" + (mapRunEnd - mapRunStart).toFixed(2) + "ms ";
         console.log("-----------");
-
     },
     rendering: function () {
         console.log("START rendering");
@@ -1239,8 +1086,6 @@ var run = {
         console.timeEnd('deleteLocalStorage');
         console.log("END : delete LocalStorage");
     }
-
-
 };
 
 var automatize = {
@@ -1253,7 +1098,6 @@ var automatize = {
             var split = document.location.href.split("/tt");
             var currentId = parseInt(split[1]);
             var lastVisited = 87331;
-
             if (automatize.IMDB[url] === undefined) {
                 automatize.IMDB[url] = {};
             }
@@ -1266,14 +1110,10 @@ var automatize = {
             if (automatize.IMDB[url]["lastVisited"] !== undefined) {
                 lastVisited = automatize.IMDB[url]["lastVisited"];
             }
-
             var nextVisit = lastVisited + 1;
-
-
             if (currentId == nextVisit) {
                 automatize.IMDB["count"] = 0;//reset count
                 automatize.IMDB[url]["lastVisited"] = currentId;
-
                 automatize.IMDB[url]["tt"][currentId] = analyzer.timesTaken;
                 localStorage.setItem("SemanticIMDB", JSON.stringify(automatize.IMDB));
                 document.location.href = url + "tt" + (currentId + 1) + "/";
@@ -1287,10 +1127,7 @@ var automatize = {
                 var finalUrl = url + "tt" + nextVisit + "/";
                 document.location = finalUrl;
             }
-
-
         }
-
     }
 };
 //automatize,analyze,map,render
